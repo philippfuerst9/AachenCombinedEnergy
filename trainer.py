@@ -8,12 +8,13 @@ import sklearn
 from   sklearn.model_selection import train_test_split
 import argparse
 import sys
+import os
 import yaml
 import matplotlib.pyplot as plt
 import imp
 sys.path.append('../')
 sys.path.append("/data/user/pfuerst/.local/")
-func = imp.load_source('loss_functions_module', '/home/pfuerst/master_thesis/software/BDT_energy_reconstruction/loss_functions.py')
+
 
 
 #to do : read config file for features and labels (!log10 entry energy!!!)
@@ -24,7 +25,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--pandas_dataframe", type=str,
-        default = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/features_dataframe_11029_11060_11070_withNaN.pkl",
+        default = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/features_dataframe_11029_11060_11070_withNaN_v2_coherent.pkl",
         help="dataframe created by extractor.py")
     parser.add_argument(
         "--feature_config", type = str,
@@ -61,7 +62,7 @@ def parse_arguments():
         
         help="objective function to use, rmse, pshe, pshedelta, rrmse, weightrmse are possible rn.")
     parser.add_argument(
-        "--modelname", type = str, default = 'NEW_WORLD_new_set',
+        "--modelname", type = str, default = 'NEW_WORLD_coherent_set',
         help = "custom name tag to be included in the output model.")
     parser.add_argument(
         "--delta", type = float, default = 3,
@@ -70,7 +71,16 @@ def parse_arguments():
     return args
 
 if __name__ == '__main__':
-    args = parse_arguments()
+    args = parse_arguments()  
+    
+    pathname = os.path.dirname(sys.argv[0])     
+    full_path =  os.path.abspath(pathname)
+    
+    func = imp.load_source('loss_functions_module', os.path.join(full_path,"loss_functions.py"))
+    
+    config_path = os.path.join(full_path, "config","files", args.feature_config)
+
+
     
     #build labels and training, validation and testing splits.
     full_dict = pd.read_pickle(args.pandas_dataframe)
@@ -93,7 +103,7 @@ if __name__ == '__main__':
     valid_size = 0.2
     X_train, X_eval, y_train, y_eval = train_test_split(X_train, y_train, test_size = valid_size, random_state = 123)
 
-    features = yaml.load(open("/home/pfuerst/master_thesis/software/BDT_energy_reconstruction/config/files/"+args.feature_config,'r'), Loader = yaml.SafeLoader)
+    features = yaml.load(open(config_path,'r'), Loader = yaml.SafeLoader)
     
     drop_keys = []
     for key in full_dict.keys():
@@ -156,9 +166,9 @@ if __name__ == '__main__':
     #save model
     mobj = str(args.objective)
     mobj = mobj.replace(":", "_")
-    modelname = mobj+'_'+args.modelname+'_N'+str(args.num_rounds)+"_"+str(args.feature_config[:-5])
+    modelname = mobj+'_'+args.modelname+'_N'+str(args.num_rounds)+"_"+str(args.feature_config[:-5])+'.model'
     print("model saved as "+modelname)
-    model.save_model('/home/pfuerst/master_thesis/software/BDT_energy_reconstruction/trained_models/'+modelname+'.model')
+    model.save_model(os.path.join(full_path, "trained_models", modelname))
 
     #save energy predictions. All testing/validation data get a NaN entry.
     ypred = model.predict(testing_datamatrix)

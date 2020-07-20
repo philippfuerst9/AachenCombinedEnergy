@@ -2,11 +2,25 @@ import xgboost as xgb
 import numpy as np
 import pandas as pd #?
 import argparse
+import sys
 from icecube import icetray, dataclasses, dataio
 from I3Tray import *
 import time
 
 #load trained model
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--model", type=str,
+        default = 'pshedelta_NEW_WORLD_old_set_N2000_standard_feat.model',
+        help="trained xgboost model used for prediction.")
+
+    parser.add_argument(
+        "--feature_config", type = str,
+        default = 'standard_feat.yaml',
+        help= "feature config used to train the loaded model, config name is the end of the model name.")
+    args = parser.parse_args()
+    return args
 
 #predictor has to know which feature function was used in the extractor.
 
@@ -24,7 +38,7 @@ import time
 class CombiEnergyPredictor(icetray.I3ConditionalModule):
     def __init__(self,context):
         icetray.I3ConditionalModule.__init__(self, context)
-        self.AddParameter("modelfile", "xgbooster model to be used", "/home/pfuerst/master_thesis/software/BDT_models/trained_models/pshedelta_good_pshe_d3_n5k_N5000.model")
+        self.AddParameter("modelfile", "xgbooster model to be used", "/home/pfuerst/master_thesis/software/BDT_models/trained_models/pshedelta_NEW_WORLD_old_set_N2000_standard_feat.model")
 
     def Configure(self):
         #This is called before frames start propagation through IceTray
@@ -92,20 +106,33 @@ class CombiEnergyPredictor(icetray.I3ConditionalModule):
         pass
 
 
-#if __name__ == '__main__':
-#    #print help(SimpleModule)
-#    testsave = "/data/user/pfuerst/test_with_BDT.i3"
-#    tray = I3Tray()
-#    tray.AddModule('I3Reader','reader', Filename = files[0])
+if __name__ == '__main__':
+    
+    args = parse_arguments()    
+    pathname = os.path.dirname(sys.argv[0])     
+    full_path =  os.path.abspath(pathname)
+    model_path = os.path.join(full_path, "trained_models", args.model)
+    print(model_path)
+    
+    config_path = os.path.join(full_path, "config", "files", args.feature_config)
+    print(config_path)
+    
+    
+    
+    #print help(SimpleModule)
+    #testsave = "/data/user/pfuerst/test_with_BDT.i3"
+    #tray = I3Tray()
+    #tray.AddModule('I3Reader','reader', Filename = files[0])
                    #FilenameList = [os.path.expanduser('~/i3/data/IC86-2011_nugen_numu/Level3_nugen_numu_IC86.2011.010039.000000.i3')])
                     #use either filename and a name
                     #or filenamelist and a list of filenames. otherwise wont work
-#    tray.AddModule(CombiEnergyPredictor,"CombiEnergyPredictor")
+    #tray.AddModule(CombiEnergyPredictor,"CombiEnergyPredictor")
+    #tray.Add("I3Writer",Filename=os.path.expanduser(testsave))
 
-#    tray.Add("I3Writer",Filename=os.path.expanduser(testsave))
-
-#    tray.Execute()
-#    tray.Finish()
+    #tray.Execute()
+    #tray.Finish()
+    
+    
     
     ##include the special hdf5 writer here that is necessary to run the NNMFit.
     
