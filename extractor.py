@@ -18,8 +18,9 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--pathlist_config", type=str,
-        default = '/home/pfuerst/master_thesis/software/BDT_energy_reconstruction/config/files/i3_pathlist_v2.yaml',
+        default = 'i3_pathlist_v2.yaml',
         help="config .yaml containing python list of paths to i3 files")
+    #/home/pfuerst/master_thesis/software/BDT_energy_reconstruction/config/files/
     parser.add_argument(
         "--name_out_pckl", type = str,
         default = '/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/features_dataframe_11029_11060_11070_withNaN_v2_coherent.pkl',
@@ -79,7 +80,7 @@ if __name__ == '__main__':
     args = parse_arguments()    
     pathname = os.path.dirname(sys.argv[0])     
     full_path =  os.path.abspath(pathname)
-    config_path = os.path.join(full_path, "config", args.pathlist_config)
+    config_path = os.path.join(full_path, "config","files", args.pathlist_config)
     print(config_path)
     pathlist = yaml.load(open(config_path,'r'), Loader = yaml.SafeLoader)
     print(pathlist)
