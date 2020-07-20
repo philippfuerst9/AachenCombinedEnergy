@@ -8,6 +8,7 @@ import pandas as pd
 import argparse
 import math
 import os
+import sys
 import imp
 import yaml
 sme = imp.load_source('joerans_module', '/home/pfuerst/master_thesis/software/Segmented_Muon_Energy_jstettner.py')
