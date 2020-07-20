@@ -75,9 +75,14 @@ def feature_extractor(frame):
     return features
 
 if __name__ == '__main__':
-    args = parse_arguments()
-    pathlist = yaml.load(open(args.pathlist_config,'r'), Loader = yaml.SafeLoader)
     
+    args = parse_arguments()    
+    pathname = os.path.dirname(sys.argv[0])     
+    full_path =  os.path.abspath(pathname)
+    config_path = os.path.join(full_path, "config", args.pathlist_config)
+    print(config_path)
+    pathlist = yaml.load(open(config_path,'r'), Loader = yaml.SafeLoader)
+    print(pathlist)
     list_of_featuredicts = []
     for path in pathlist:
         
