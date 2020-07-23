@@ -17,5 +17,13 @@ and make a prediction on the testing data set which is once again saved as a pic
 
 To predict energies on new i3 files with your trained model, run `predictor.py`
 
+#personal to do list
+
+1) change all hardcoded paths to depend only on main.cfg, add several "plots" paths to main.cfg one for BDT validation and one for analysis plots vs. topo vars.
+
+2) build predictor.py to create either i3 files in the same format as the given ones (collect i3 file name) or to build a hdf5 file exactly as the NNMFit needs. This hdf5
+file builder should be independent, i.e. takes (variable list) and writes it to hdf5 so that e.g. E_dnn can also be processed in this way.
+
+3) add some custom features like DNN classifier output and remove nch,ndirc, nstringhits from training.
 
 
