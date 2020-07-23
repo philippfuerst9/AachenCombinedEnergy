@@ -26,4 +26,4 @@ file builder should be independent, i.e. takes (variable list) and writes it to 
 
 3) add some custom features like DNN classifier output and remove nch,ndirc, nstringhits from training.
 
-
+4) find joerans data sample for mis reconstructed muon events that look like tracks but arent and jlet the BDT predict their entry energies to see what happens.
