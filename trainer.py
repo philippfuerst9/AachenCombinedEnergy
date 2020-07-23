@@ -14,8 +14,7 @@ import matplotlib.pyplot as plt
 import imp
 sys.path.append('../')
 sys.path.append("/data/user/pfuerst/.local/")
-
-
+func = imp.load_source('lossfuncs', '/home/pfuerst/master_thesis/software/combienergy/loss_functions.py') 
 
 #to do : read config file for features and labels (!log10 entry energy!!!)
 
@@ -58,11 +57,11 @@ def parse_arguments():
         "--test_split_size", type = float, default = 0.4,
         help="percent of data used for testing, i.e. amount of data with predicted energies")
     parser.add_argument(
-        "--objective", type = str, default = "pshedelta",
+        "--objective", type = str, default = "rmse", #'pshedelta'
         
         help="objective function to use, rmse, pshe, pshedelta, rrmse, weightrmse are possible rn.")
     parser.add_argument(
-        "--modelname", type = str, default = 'NEW_WORLD_coherent_set',
+        "--modelname", type = str, default = 'NEW_WORLD_rmse_coherent_set',
         help = "custom name tag to be included in the output model.")
     parser.add_argument(
         "--delta", type = float, default = 3,
@@ -73,10 +72,10 @@ def parse_arguments():
 if __name__ == '__main__':
     args = parse_arguments()  
     
-    pathname = os.path.dirname(sys.argv[0])     
-    full_path =  os.path.abspath(pathname)
+    #pathname = os.path.dirname(sys.argv[0])    ###this ofc doesnt work running on condor machines  
+    #full_path =  os.path.abspath(pathname)
     
-    func = imp.load_source('loss_functions_module', os.path.join(full_path,"loss_functions.py"))
+    full_path = "/home/pfuerst/master_thesis/software/combienergy"
     
     config_path = os.path.join(full_path, "config","files", args.feature_config)
 

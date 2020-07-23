@@ -18,7 +18,7 @@ folders11029 = ["02000-02999","03000-03999",  "04000-04999",  "05000-05999"]
 for folder in folders11029:
     pathlist.append(path11029+folder+"/")
 
-name = '/home/pfuerst/master_thesis/software/BDT_energy_reconstruction/config/files/i3_pathlist.yaml'
+name = '../files/i3_pathlist.yaml'
 with open(name, 'w') as file:
     yaml.dump(pathlist, file)
 print("file saved at {}".format(name))
@@ -33,7 +33,7 @@ for folder in folders:
     pathlist2.append(main_path+folder)
     
     
-name2 = '/home/pfuerst/master_thesis/software/BDT_energy_reconstruction/config/files/i3_pathlist_v2.yaml'
+name2 = '../files/i3_pathlist_v2.yaml'
 with open(name2, 'w') as file2:
     yaml.dump(pathlist2, file2)
 print("file saved at {}".format(name2))
