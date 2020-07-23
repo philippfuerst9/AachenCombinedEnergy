@@ -27,3 +27,7 @@ file builder should be independent, i.e. takes (variable list) and writes it to 
 3) add some custom features like DNN classifier output and remove nch,ndirc, nstringhits from training.
 
 4) find joerans data sample for mis reconstructed muon events that look like tracks but arent and jlet the BDT predict their entry energies to see what happens.
+
+#run nnmfit
+
+`python NNMFit/analysis/run_fit.py /data/user/pfuerst/NNMFit/NNMFit/resources/configs/main_SPL.cfg --analysis_config /data/user/pfuerst/NNMFit/NNMFit/resources/configs/analysis_configs/asimov_SPL.yaml -o my_second_fit.pickle`
