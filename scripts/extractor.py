@@ -82,9 +82,9 @@ def feature_extractor(frame):
 if __name__ == '__main__':
     
     args = parse_arguments()    
-    pathname = os.path.dirname(sys.argv[0])     
-    full_path =  os.path.abspath(pathname)
-    config_path = os.path.join(full_path, "config","files", args.pathlist_config)
+    #pathname = os.path.dirname(sys.argv[0])     
+    #full_path =  os.path.abspath(pathname)
+    config_path = os.path.join("../", "config","files", args.pathlist_config)
     print(config_path)
     pathlist = yaml.load(open(config_path,'r'), Loader = yaml.SafeLoader)
     print(pathlist)

@@ -10,16 +10,15 @@ import argparse
 import sys
 import os
 import yaml
+import matplotlib
+matplotlib.use('agg') #otherwise get an Tkinter import error... maybe use different environment.
 import matplotlib.pyplot as plt
+import matplotlib.cbook as cbook 
+import matplotlib.colors as colors 
 import imp
 sys.path.append('../')
-sys.path.append(os.path.join("/data/user/",os.environ.get('USER'),"/.local/"))
+#sys.path.append(os.path.join("/data/user/",os.environ.get('USER'),"/.local/"))
 import tools.loss_functions as func
-#import tools.segmented_muon_energy as sme    #not py3 compatible yet.
-print(sme)
-#to do : read config file for features and labels (!log10 entry energy!!!)
-
-#required argument: loss function to be used, obj and eval MUST be specified (but have standard rmse)
 
 def parse_arguments():
     """argument parser to specify configuration"""
@@ -77,9 +76,9 @@ if __name__ == '__main__':
     #pathname = os.path.dirname(sys.argv[0])    ###this ofc doesnt work running on condor machines  
     #full_path =  os.path.abspath(pathname)
     
-    full_path = "/home/pfuerst/master_thesis/software/combienergy"
+    #full_path = "/home/pfuerst/master_thesis/software/combienergy"
     
-    config_path = os.path.join(full_path, "config","files", args.feature_config)
+    config_path = os.path.join("../", "config","files", args.feature_config)
 
 
     

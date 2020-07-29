@@ -76,7 +76,7 @@ def custom_relative_rmse(pred, dtrain):
     hess = 1./truth
     return grad, hess
 
-def custom__relative_rmse_err(pred: np.ndarray, dtrain = xgb.DMatrix):
+def custom__relative_rmse_err(pred, dtrain = xgb.DMatrix):
     '''
     return a pair (name, result) name cannot contain : or space for each wanted evaluation error
     returns
