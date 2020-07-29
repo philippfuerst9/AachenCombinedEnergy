@@ -15,6 +15,7 @@ sme = imp.load_source('joerans_module', '/home/pfuerst/master_thesis/software/Se
 
 #this program loads all i3 files from the folders supplied by the config file and builds one big pandas dataframe.
 def parse_arguments():
+    """argument parser to specify configuration"""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--pathlist_config", type=str,
@@ -29,9 +30,9 @@ def parse_arguments():
     return args
 
 def feature_extractor(frame):
-    """
-    reads the keys we want as features. Energies are in log10[GeV], 
-    except for energy entry/exit as exit can be 0
+    """reads feature keys from frame into a dictionary
+    
+    Energies are in log10[GeV], except for energy entry/exit as exit can be 0
     """
     #if true e key does not exist do this
     #e_entry = np.NaN

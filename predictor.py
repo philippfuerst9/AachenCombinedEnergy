@@ -9,6 +9,7 @@ import time
 
 #load trained model
 def parse_arguments():
+    """argument parser to specify configuration"""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--model", type=str,
@@ -36,6 +37,10 @@ def parse_arguments():
 #get_e_trunc or sth
 
 class CombiEnergyPredictor(icetray.I3ConditionalModule):
+    """I3Module to add an energy prediction key
+    
+    Uses a trained BDT and needs the specific features it was trained on
+    """
     def __init__(self,context):
         icetray.I3ConditionalModule.__init__(self, context)
         self.AddParameter("modelfile", "xgbooster model to be used", "/home/pfuerst/master_thesis/software/BDT_models/trained_models/pshedelta_NEW_WORLD_old_set_N2000_standard_feat.model")

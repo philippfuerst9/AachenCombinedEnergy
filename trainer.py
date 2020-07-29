@@ -21,6 +21,7 @@ func = imp.load_source('lossfuncs', '/home/pfuerst/master_thesis/software/combie
 #required argument: loss function to be used, obj and eval MUST be specified (but have standard rmse)
 
 def parse_arguments():
+    """argument parser to specify configuration"""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--pandas_dataframe", type=str,
