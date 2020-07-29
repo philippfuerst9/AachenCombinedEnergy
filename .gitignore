@@ -1,0 +1,9 @@
+#ignore ipython notebooks used for testing
+*.ipynb
+
+# Byte-compiled / optimized / DLL files
+ __pycache__/
+ *.py[cod]
+
+# C extensions
+*.so
