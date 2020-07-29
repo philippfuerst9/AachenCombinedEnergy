@@ -13,9 +13,10 @@ import yaml
 import matplotlib.pyplot as plt
 import imp
 sys.path.append('../')
-sys.path.append("/data/user/pfuerst/.local/")
-func = imp.load_source('lossfuncs', '/home/pfuerst/master_thesis/software/combienergy/loss_functions.py') 
-
+sys.path.append(os.path.join("/data/user/",os.environ.get('USER'),"/.local/"))
+import tools.loss_functions as func
+#import tools.segmented_muon_energy as sme    #not py3 compatible yet.
+print(sme)
 #to do : read config file for features and labels (!log10 entry energy!!!)
 
 #required argument: loss function to be used, obj and eval MUST be specified (but have standard rmse)

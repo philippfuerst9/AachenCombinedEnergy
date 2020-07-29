@@ -11,7 +11,10 @@ import os
 import sys
 import imp
 import yaml
-sme = imp.load_source('joerans_module', '/home/pfuerst/master_thesis/software/Segmented_Muon_Energy_jstettner.py')
+sys.path.append('../')
+sys.path.append(os.path.join("/data/user/",os.environ.get('USER'),"/.local/"))
+#import tools.segmented_muon_energy as sme not py3 compatible
+
 
 #this program loads all i3 files from the folders supplied by the config file and builds one big pandas dataframe.
 def parse_arguments():
