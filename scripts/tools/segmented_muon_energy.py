@@ -1,6 +1,10 @@
 from icecube import icetray, dataclasses, dataio, simclasses
-#from icecube.icetray import I3Units
+from icecube.icetray import I3Units
 import numpy as np
+
+'''
+All credits go to Joeran Stettner for providing this. It is equivalent to the level 5 processing script
+'''
 
 def get_interacting_neutrino(fr):
     """ Starting with the MCPrimary1 we go through the tree until we find the interacting neutrino """

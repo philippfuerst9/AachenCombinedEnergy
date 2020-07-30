@@ -1,24 +1,27 @@
 #!/bin/sh /cvmfs/icecube.opensciencegrid.org/py3-v4.1.0/icetray-start
 #METAPROJECT /home/pfuerst/i3_software_py3/combo/build
 
-import xgboost as xgb
+# -- internal packages -- 
+import argparse
+import imp
+import matplotlib.pyplot as plt
 import numpy   as np
+import os
+
+# -- external packages --
+#e.g. pip install pyyaml --user
 import pandas  as pd
 import sklearn
 from   sklearn.model_selection import train_test_split
-import argparse
 import sys
-import os
 import yaml
-import matplotlib
-matplotlib.use('agg') #otherwise get an Tkinter import error... maybe use different environment.
-import matplotlib.pyplot as plt
-import matplotlib.cbook as cbook 
-import matplotlib.colors as colors 
-import imp
-sys.path.append('../')
-#sys.path.append(os.path.join("/data/user/",os.environ.get('USER'),"/.local/"))
-import tools.loss_functions as func
+import xgboost as xgb
+
+# -- custom imports --
+#this is hardcoded and sad. Find another way that still works on condor 
+full_path = "/home/pfuerst/master_thesis/software/combienergy"
+sys.path.append(os.path.join(full_path))
+import scripts.tools.loss_functions as func
 
 def parse_arguments():
     """argument parser to specify configuration"""
@@ -29,13 +32,16 @@ def parse_arguments():
         help="dataframe created by extractor.py")
     parser.add_argument(
         "--feature_config", type = str,
-        default = "standard_feat.yaml",
+        default = "L5_E.yaml",
         help= ".yaml containing a list of features to be used for training and prediction")
     parser.add_argument(
         "--label_key", type = str, default = "E_entry",
         help="key in dataframe to be used as label (has true E), previously E_truth_label which was in log10E!")
+    parser.add_argument(
+        "--modelname", type = str, default = 'combienergy',
+        help = "custom name tag to be appended to the output model name.")
     
-    #--- training hyperparameters ---#
+    # -- training hyperparameters -- 
     
     parser.add_argument(
         "--max_depth", type=int, default=6, help="max tree depth")
@@ -52,18 +58,15 @@ def parse_arguments():
     parser.add_argument(
         "--min_child_weight", type = float, default = 10)
     parser.add_argument(
-        "--num_rounds", type=int, default = 2000,
+        "--num_rounds", type=int, default = 2500,
         help="number of boosting rounds")
     parser.add_argument(
-        "--test_split_size", type = float, default = 0.4,
+        "--test_split_size", type = float, default = 0.1,
         help="percent of data used for testing, i.e. amount of data with predicted energies")
     parser.add_argument(
         "--objective", type = str, default = "rmse", #'pshedelta'
-        
         help="objective function to use, rmse, pshe, pshedelta, rrmse, weightrmse are possible rn.")
-    parser.add_argument(
-        "--modelname", type = str, default = 'NEW_WORLD_rmse_coherent_set',
-        help = "custom name tag to be included in the output model.")
+
     parser.add_argument(
         "--delta", type = float, default = 3,
         help = "for huber loss slope")
@@ -76,9 +79,9 @@ if __name__ == '__main__':
     #pathname = os.path.dirname(sys.argv[0])    ###this ofc doesnt work running on condor machines  
     #full_path =  os.path.abspath(pathname)
     
-    #full_path = "/home/pfuerst/master_thesis/software/combienergy"
+
     
-    config_path = os.path.join("../", "config","files", args.feature_config)
+    config_path = os.path.join(full_path, "config","files", args.feature_config)
 
 
     
@@ -104,6 +107,10 @@ if __name__ == '__main__':
     X_train, X_eval, y_train, y_eval = train_test_split(X_train, y_train, test_size = valid_size, random_state = 123)
 
     features = yaml.load(open(config_path,'r'), Loader = yaml.SafeLoader)
+    for key in features:
+        if key not in full_dict.keys():
+            print("key not found in pickle file!")
+            raise KeyError("trying to use a feature not contained in loaded data")
     
     drop_keys = []
     for key in full_dict.keys():

@@ -36,10 +36,27 @@ with open(name_no_light, 'w') as file:
 print("file saved at {}".format(name_no_light))
 
 
-#any other custom config. If you want to add new features use add_features.py
+L5_E = ["cog_rho","cog_z","lseparation","nch","bayes_llh_diff",
+                    "cos_zenith","rlogl","ldir_c",
+                    "ndir_c","sigma_paraboloid","sdir_e",
+                    "E_truncated","E_muex","E_dnn","random_variable"]
 
-custom_list = []
-custom_name = None
+name_L5_E = '../files/L5_E.yaml'
+with open(name_L5_E, 'w') as file:
+    yaml.dump(L5_E, file)
+print("file saved at {}".format(name_L5_E))
+
+#badtest = ["cog_rho","soos"]
+
+#badname = '../files/badtest.yaml'
+#with open(badname, 'w') as file:
+#    yaml.dump(badtest, file)
+#print("file saved at {}".format(badname))
+
+# -----  any other custom config. If you want to add new features use add_features.py ----- #
+
+#custom_list = []
+#custom_name = None
 
 #with open(custom_name, 'w') as file:
 #    yaml.dump(custom_list, file)

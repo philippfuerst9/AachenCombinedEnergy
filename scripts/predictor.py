@@ -6,7 +6,7 @@ import sys
 from icecube import icetray, dataclasses, dataio
 from I3Tray import *
 import time
-
+import tools.segmented_muon_energy as sme
 #load trained model
 def parse_arguments():
     """argument parser to specify configuration"""
@@ -18,7 +18,7 @@ def parse_arguments():
 
     parser.add_argument(
         "--feature_config", type = str,
-        default = 'standard_feat.yaml',
+        default = 'L5_E.yaml',
         help= "feature config used to train the loaded model, config name is the end of the model name.")
     args = parser.parse_args()
     return args
@@ -36,11 +36,64 @@ def parse_arguments():
 
 #get_e_trunc or sth
 
+def all_features():
+    
+    """returns a dict of all possible features and how to calculate them from i3. file
+    anything added with add_feature.py should be contained here.
+    """
+    
+    features = {
+                "cog_rho"             : math.sqrt(frame["HitStatisticsValuesIC"].cog.x**2. + frame["HitStatisticsValuesIC"].cog.y**2.),
+                "cog_z"               : frame["HitStatisticsValuesIC"].cog.z,
+                "lseparation"         : frame["SplineMPEICCharacteristicsIC"].track_hits_separation_length,
+                "nch"                 : frame["HitMultiplicityValuesIC"].n_hit_doms,
+                "bayes_llh_diff"      : frame["SPEFit2BayesianICFitParams"].logl-frame["SPEFit2ICFitParams"].logl,
+                "cos_zenith"          : math.cos(frame["SplineMPEIC"].dir.zenith),
+                "rlogl"               : frame["SplineMPEICFitParams"].rlogl,
+                "ldir_c"              : frame["SplineMPEICDirectHitsICC"].dir_track_length,
+                "ndir_c"              : frame["SplineMPEICDirectHitsICC"].n_dir_doms,
+                "sigma_paraboloid"    : math.sqrt(frame["MPEFitParaboloidFitParams"].pbfErr1**2. + frame["MPEFitParaboloidFitParams"].pbfErr2**2.)/math.sqrt(2.) / I3Units.degree,
+                "sdir_e"              : frame["SplineMPEICDirectHitsICE"].dir_track_hit_distribution_smoothness,
+                "n_string_hits"       : frame["HitMultiplicityValuesIC"].n_hit_strings,
+                "E_truncated"         : np.log10(frame["SplineMPEICTruncatedEnergySPICEMie_AllDOMS_Muon"].energy),
+                "E_muex"              : np.log10(frame["SplineMPEICMuEXDifferential"].energy),
+                "E_dnn"               : frame["TUM_dnn_energy"]["mu_E_on_entry"],
+                "random_variable"     : np.random.random()*10
+                }
+    return features
+
+
+class TrueMuonEnergy(icetray.I3ConditionalModule):
+
+    """I3Module to add several true muon energies.
+    
+    AtInteraction: the Muon energy when it is first created
+    All 3 are in GeV and AtDetectorLeave is = 0 if the Muon does not get out of the detector.
+    """
+    def Physics(self, frame)
+        try:
+            e_first, e_last = sme.EnergyAtEgdeNoMuonGun(frame)
+            frame.Put("TrueMuoneEnergyAtDetectorEntry", dataclasses.I3Double(e_first))
+            frame.Put("TrueMuoneEnergyAtDetectorLeave", dataclasses.I3Double(e_last))
+        except:
+            frame.Put("TrueMuoneEnergyAtDetectorEntry", dataclasses.I3Double(np.NaN))
+            frame.Put("TrueMuoneEnergyAtDetectorLeave", dataclasses.I3Double(np.NaN))
+        nu, lepton, hadrons, nu_out = sme.get_interacting_neutrino_and_daughters(frame)
+        mu_e = np.nan if lepton is None else lepton.energy
+        frame.Put("TrueMuonEnergyAtInteraction", dataclasses.I3Double(mu_e))
+        
+    def DAQ(self,frame):
+        #This runs on Q-Frames
+        self.PushFrame(frame)
+        
+        
 class CombiEnergyPredictor(icetray.I3ConditionalModule):
+    
     """I3Module to add an energy prediction key
     
     Uses a trained BDT and needs the specific features it was trained on
     """
+    
     def __init__(self,context):
         icetray.I3ConditionalModule.__init__(self, context)
         self.AddParameter("modelfile", "xgbooster model to be used", "/home/pfuerst/master_thesis/software/BDT_models/trained_models/pshedelta_NEW_WORLD_old_set_N2000_standard_feat.model")
@@ -68,24 +121,7 @@ class CombiEnergyPredictor(icetray.I3ConditionalModule):
             #https://code.icecube.wisc.edu/projects/icecube/browser/IceCube/projects/finallevel_filter_diffusenumu/trunk/python/level5/segments.py
             #added is n_string_hits, E_truncated, E_muex, E_dnn and random_variable
             #E_dnn prediction is in log10 E already.
-            features = {
-                "cog_rho"             : math.sqrt(frame["HitStatisticsValuesIC"].cog.x**2. + frame["HitStatisticsValuesIC"].cog.y**2.),
-                "cog_z"               : frame["HitStatisticsValuesIC"].cog.z,
-                "lseparation"         : frame["SplineMPEICCharacteristicsIC"].track_hits_separation_length,
-                "nch"                 : frame["HitMultiplicityValuesIC"].n_hit_doms,
-                "bayes_llh_diff"      : frame["SPEFit2BayesianICFitParams"].logl-frame["SPEFit2ICFitParams"].logl,
-                "cos_zenith"          : math.cos(frame["SplineMPEIC"].dir.zenith),
-                "rlogl"               : frame["SplineMPEICFitParams"].rlogl,
-                "ldir_c"              : frame["SplineMPEICDirectHitsICC"].dir_track_length,
-                "ndir_c"              : frame["SplineMPEICDirectHitsICC"].n_dir_doms,
-                "sigma_paraboloid"    : math.sqrt(frame["MPEFitParaboloidFitParams"].pbfErr1**2. + frame["MPEFitParaboloidFitParams"].pbfErr2**2.)/math.sqrt(2.) / I3Units.degree,
-                "sdir_e"              : frame["SplineMPEICDirectHitsICE"].dir_track_hit_distribution_smoothness,
-                "n_string_hits"       : frame["HitMultiplicityValuesIC"].n_hit_strings,
-                "E_truncated"         : np.log10(frame["SplineMPEICTruncatedEnergySPICEMie_AllDOMS_Muon"].energy),
-                "E_muex"              : np.log10(frame["SplineMPEICMuEXDifferential"].energy),
-                "E_dnn"               : frame["TUM_dnn_energy"]["mu_E_on_entry"],
-                "random_variable"     : np.random.random()*10
-                }
+
 
             pandasframe = pd.DataFrame(data = features, index = [0])
             datamatrix  = xgb.DMatrix(data = pandasframe, label =label)
@@ -94,13 +130,13 @@ class CombiEnergyPredictor(icetray.I3ConditionalModule):
             #it also predicts log10 energy but true energy should be in keys
             prediction= 10**(prediction[0].astype(np.float64))
 
-            frame.Put("ACEnergyCombi_Truth",      dataclasses.I3Double(truth)   )
-            frame.Put("ACEnergyCombi_Prediction", dataclasses.I3Double(prediction))
+            frame.Put("ACEnergy_Truth",      dataclasses.I3Double(truth)   )
+            frame.Put("ACEnergy_Prediction", dataclasses.I3Double(prediction))
             self.PushFrame(frame)
         except:
             self.PushFrame(frame)      
-            frame.Put("ACEnergyCombi_Truth",      dataclasses.I3Double(truth)   )
-            frame.Put("ACEnergyCombi_Prediction", dataclasses.I3Double(prediction))
+            frame.Put("ACEnergy_Truth",      dataclasses.I3Double(truth)   )
+            frame.Put("ACEnergy_Prediction", dataclasses.I3Double(prediction))
             
     def DAQ(self,frame):
         #This runs on Q-Frames
@@ -108,6 +144,7 @@ class CombiEnergyPredictor(icetray.I3ConditionalModule):
 
     def Finish(self):
         #Here we can perform cleanup work (closing file handles etc.)
+        del self.model
         pass
 
 
