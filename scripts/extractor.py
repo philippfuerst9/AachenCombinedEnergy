@@ -9,10 +9,9 @@ import argparse
 import math
 import os
 import sys
-import imp
 import yaml
-sys.path.append('../')
-sys.path.append(os.path.join("/data/user/",os.environ.get('USER'),"/.local/"))
+full_path = "/home/pfuerst/master_thesis/software/combienergy"
+sys.path.append(os.path.join(full_path))
 #import tools.segmented_muon_energy as sme not py3 compatible
 
 
@@ -58,10 +57,11 @@ def feature_extractor(frame):
     "ndir_c"              : frame["L5_ndir_c"].value,
     "sigma_paraboloid"    : frame["L5_sigma_paraboloid"].value,
     "sdir_e"              : frame["L5_sdir_e"].value,
-    "n_string_hits"       : frame["HitMultiplicityValuesIC"].n_hit_strings,
+    #"n_string_hits"       : frame["HitMultiplicityValuesIC"].n_hit_strings,
     "E_truncated"         : np.NaN,
     "E_muex"              : np.NaN,
-    "E_dnn"               : frame["TUM_dnn_energy_hive"]["mu_E_on_entry"],
+    #"E_dnn"               : frame["TUM_dnn_energy_hive"]["mu_E_on_entry"],
+    "E_dnn"               : frame["TUM_dnn_energy"]["mu_E_on_entry"],        
     "random_variable"     : np.random.random()*10,
     "E_entry"             : frame["TrueMuoneEnergyAtDetectorEntry"].value,   #e_entry
     "E_exit"              : frame["TrueMuoneEnergyAtDetectorLeave"].value    #e_exit
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     args = parse_arguments()    
     #pathname = os.path.dirname(sys.argv[0])     
     #full_path =  os.path.abspath(pathname)
-    config_path = os.path.join("../", "config","files", args.pathlist_config)
+    config_path = os.path.join(full_path, "config","files", args.pathlist_config)
     print(config_path)
     pathlist = yaml.load(open(config_path,'r'), Loader = yaml.SafeLoader)
     print(pathlist)

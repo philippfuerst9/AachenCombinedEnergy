@@ -38,6 +38,5 @@ with open(name2, 'w') as file2:
     yaml.dump(pathlist2, file2)
 print("file saved at {}".format(name2))
 
-
-
 #custom new pathlist:
+

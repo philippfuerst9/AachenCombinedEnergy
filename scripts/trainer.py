@@ -3,17 +3,17 @@
 
 # -- internal packages -- 
 import argparse
-import imp
 import matplotlib.pyplot as plt
 import numpy   as np
 import os
+import pickle
+import sys
 
 # -- external packages --
 #e.g. pip install pyyaml --user
 import pandas  as pd
 import sklearn
 from   sklearn.model_selection import train_test_split
-import sys
 import yaml
 import xgboost as xgb
 
@@ -175,7 +175,16 @@ if __name__ == '__main__':
     mobj = mobj.replace(":", "_")
     modelname = mobj+'_'+args.modelname+'_N'+str(args.num_rounds)+"_"+str(args.feature_config[:-5])+'.model'
     print("model saved as "+modelname)
-    model.save_model(os.path.join(full_path, "trained_models", modelname))
+    #model.save_model(os.path.join(full_path, "trained_models", modelname))
+    #model.dump_model(os.path.join(full_path, "trained_models", modelname))
+    
+    #repeat after me: DO NOT USE XGBOOSTS INTERNAL .save_model OR .dump_model !!!
+    #reason 1) .save_model forgets feature names and order and if they are messed up
+    #          it doesnt care and predicts random numbers (e.g. it could think E_dnn is cog_rho or sth.
+    #reason 2) loading models saved with .dump_model models instantly crashes ipython notebooks.
+    
+    pickle.dump(model, open(os.path.join(full_path, "trained_models", ("PICKLED_"+modelname)),"wb"))
+
 
     #save energy predictions. All testing/validation data get a NaN entry.
     ypred = model.predict(testing_datamatrix)
