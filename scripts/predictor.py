@@ -32,7 +32,7 @@ full_path = "/home/pfuerst/master_thesis/software/combienergy"
 sys.path.append(os.path.join(full_path))
 import scripts.tools.loss_functions as func
 import scripts.tools.segmented_muon_energy as sme
-from extractor import feature_extractor
+from scripts.extractor import feature_extractor
 
 
 
@@ -42,7 +42,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model",
                 type=str,
-                default = 'PICKLED_rmse_debugg_bagger_DUMPED_N1500_L5_E.model',
+                default = 'PICKLED_rmse_combienergy_N2500_L5_E.model',
                 help="trained xgboost model used for prediction.")
 
     parser.add_argument("--feature_config",
@@ -60,7 +60,8 @@ def parse_arguments():
                         required = True,
                         help = "directory where i3 files WITH new key should be saved.")
 
-    
+    #/data/ana/Diffuse/AachenUpgoingTracks/sim/simprod_NuMu2019/21124/wPS_variables/wBDT
+    #/data/ana/Diffuse/AachenUpgoingTracks/sim/simprod_NuMu2019/21002/wPS_variables/wBDT
     args = parser.parse_args()
     return args
 
@@ -85,6 +86,7 @@ class TrueMuonEnergy(icetray.I3ConditionalModule):
         nu, lepton, hadrons, nu_out = sme.get_interacting_neutrino_and_daughters(frame)
         mu_e = np.nan if lepton is None else lepton.energy
         frame.Put("TrueMuonEnergyAtInteraction", dataclasses.I3Double(mu_e))
+        self.PushFrame(frame)
         
     def DAQ(self,frame):
         #This runs on Q-Frames
@@ -122,20 +124,20 @@ class ACEPredictor(icetray.I3ConditionalModule):
         to have this exactly the same as it was for training.
         It sometimes fails if entry energy cannot be calculated or one of the other keys is NaN or missing.
         """
-        try: 
+        #try: 
 
-            features = feature_extractor(frame)
-            pandasframe = pd.DataFrame(data = features, index = [0])  #dataframe with one-line needs an index
-            truth = pandasframe["E_entry"][0]
-            cleanframe = pandasframe.drop(columns = ["E_entry", "E_exit"])
-            cleanframe = cleanframe[self.model_list]   #this is superduper important. 
-            datamatrix = xgb.DMatrix(data = cleanframe)
-            prediction = self.model.predict(datamatrix)
-            prediction= 10**(prediction[0].astype(np.float64))
+        features = feature_extractor(frame)
+        pandasframe = pd.DataFrame(data = features, index = [0])  #dataframe with one-line needs an index
+        truth = pandasframe["E_entry"][0]
+        cleanframe = pandasframe.drop(columns = ["E_entry", "E_exit"])
+        cleanframe = cleanframe[self.model_list]   #this is superduper important. 
+        datamatrix = xgb.DMatrix(data = cleanframe)
+        prediction = self.model.predict(datamatrix)
+        prediction= 10**(prediction[0].astype(np.float64))
 
-        except: 
-            truth = np.NaN
-            prediction = np.NaN
+        #except: 
+        #    truth = np.NaN
+        #    prediction = np.NaN
             
         self.PushFrame(frame)      
         frame.Put("ACEnergy_Truth",      dataclasses.I3Double(truth))
@@ -176,10 +178,12 @@ if __name__ == '__main__':
         print(filename)
         tray = I3Tray()
 
-        tray.Add("I3Reader","source", filename = os.path.join(folder+filename))
+        tray.Add("I3Reader","source", filename = os.path.join(folder,filename)) #SkipKeys
 
+        
+        tray.AddModule(TrueMuonEnergy)
         tray.AddModule(ACEPredictor, "addingCombiEnergy", model_path =  model_path)
 
-        tray.Add("I3Writer", Filename = os.path.join(save+filename))
+        tray.Add("I3Writer", Filename = os.path.join(save,filename))
         tray.Execute()
         tray.Finish()

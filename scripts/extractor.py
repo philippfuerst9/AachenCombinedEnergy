@@ -1,18 +1,34 @@
 #!/bin/sh /cvmfs/icecube.opensciencegrid.org/py3-v4.1.0/icetray-start
 #METAPROJECT /home/pfuerst/i3_software_py3/combo/build
 
-from icecube import dataio, dataclasses, icetray, common_variables, paraboloid
-from icecube.icetray import I3Units
-import numpy as np
-import pandas as pd
+# -- internal packages -- 
 import argparse
 import math
+import numpy   as np
 import os
+import pickle
 import sys
+import time
+
+# -- external packages --
+#e.g. pip install pyyaml --user
+import pandas  as pd
+import sklearn #__version__ 0.23.1
+from   sklearn.model_selection import train_test_split
 import yaml
+import xgboost as xgb #__version__ 1.1.1
+
+# -- icetray --
+from icecube import dataio, dataclasses, icetray, common_variables, paraboloid
+from icecube.icetray import I3Units
+from I3Tray import *
+
+# -- custom imports --
+#this is hardcoded and will change once it all is a package.
 full_path = "/home/pfuerst/master_thesis/software/combienergy"
 sys.path.append(os.path.join(full_path))
-#import tools.segmented_muon_energy as sme not py3 compatible
+import scripts.tools.loss_functions as func
+import scripts.tools.segmented_muon_energy as sme
 
 
 #this program loads all i3 files from the folders supplied by the config file and builds one big pandas dataframe.
@@ -60,8 +76,8 @@ def feature_extractor(frame):
     #"n_string_hits"       : frame["HitMultiplicityValuesIC"].n_hit_strings,
     "E_truncated"         : np.NaN,
     "E_muex"              : np.NaN,
-    #"E_dnn"               : frame["TUM_dnn_energy_hive"]["mu_E_on_entry"],
-    "E_dnn"               : frame["TUM_dnn_energy"]["mu_E_on_entry"],        
+    "E_dnn"               : frame["TUM_dnn_energy_hive"]["mu_E_on_entry"],  #different pulsemap as in training
+    #"E_dnn"               : frame["TUM_dnn_energy"]["mu_E_on_entry"],        
     "random_variable"     : np.random.random()*10,
     "E_entry"             : frame["TrueMuoneEnergyAtDetectorEntry"].value,   #e_entry
     "E_exit"              : frame["TrueMuoneEnergyAtDetectorLeave"].value    #e_exit
