@@ -1,0 +1,9 @@
+initialdir = /home/pfuerst
+executable = /home/pfuerst/master_thesis/software/combienergy/scripts/predictor.py
+arguments = --savepath $(SAVEPATH) --loadfiles $(LOADFILES) --batchname $(BATCHNAME)
+request_memory = 3GB
+output = /data/user/$ENV(USER)/condor/condorlogs/$(BATCHNAME).out
+error  = /data/user/$ENV(USER)/condor/condorlogs/$(BATCHNAME).err
+log    = /scratch/pfuerst/combienergy/$(BATCHNAME).log
+queue 1
+

@@ -34,7 +34,7 @@ def parse_arguments():
         help="dataframe created by extractor.py")
     parser.add_argument(
         "--feature_config", type = str,
-        default = "L5_E.yaml",
+        default = "L5_E_no_sigmapar.yaml",
         help= ".yaml containing a list of features to be used for training and prediction")
     parser.add_argument(
         "--label_key", type = str, default = "E_entry",
@@ -66,7 +66,7 @@ def parse_arguments():
         "--num_rounds", type=int, default = 2000,
         help="number of boosting rounds")
     parser.add_argument(
-        "--test_split_size", type = float, default = 0.1,
+        "--test_split_size", type = float, default = 0.2,
         help="percent of data used for testing, i.e. amount of data with predicted energies")
     parser.add_argument(
         "--objective", type = str, default = "rmse", #'pshedelta'

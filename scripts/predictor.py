@@ -34,9 +34,6 @@ import scripts.tools.loss_functions as func
 import scripts.tools.segmented_muon_energy as sme
 from scripts.extractor import feature_extractor
 
-
-
-
 def parse_arguments():
     """argument parser to specify configuration"""
     parser = argparse.ArgumentParser()
@@ -45,20 +42,35 @@ def parse_arguments():
                 default = 'PICKLED_rmse_combienergy_N2500_L5_E.model',
                 help="trained xgboost model used for prediction.")
 
-    parser.add_argument("--feature_config",
-                type = str,
-                default = 'L5_E.yaml',
-                help= "feature config used to train the loaded model, config name is the end of the model name.")
+    #parser.add_argument("--feature_config",
+    #            type = str,
+    #            default = 'L5_E.yaml',
+    #            help= "feature config used to train the loaded model, config name is the end of the model name.")
+
+    group = parser.add_mutually_exclusive_group(required = True)
+    group.add_argument("--loadfiles",
+                       nargs = "+", type = str,
+                       help = "list of filenames to be processed as batch to be built with condor submit script.")
     
-    parser.add_argument("--loadpath",
+    group.add_argument("--loadpath",
                         type = str, 
-                        required = True,
                         help = "single directory path containing i3 files to be predicted on.")
 
     parser.add_argument("--savepath",
                         type = str,
                         required = True,
-                        help = "directory where i3 files WITH new key should be saved.")
+                        help = "directory where new i3 files with new key should be saved.")
+    
+    parser.add_argument("--batchname", 
+                       type = str,
+                       required = "--loadfiles" in sys.argv,
+                       help = "if --loadfiles is set, this is the batched i3 files name.")
+    
+    parser.add_argument("--n_i3batch",
+                        type = int,
+                        default = 10,
+                        required = "--loadpath" in sys.argv,
+                        help = "No. of files to combine into new files if entire directory is supplied.")
 
     #/data/ana/Diffuse/AachenUpgoingTracks/sim/simprod_NuMu2019/21124/wPS_variables/wBDT
     #/data/ana/Diffuse/AachenUpgoingTracks/sim/simprod_NuMu2019/21002/wPS_variables/wBDT
@@ -153,7 +165,20 @@ class ACEPredictor(icetray.I3ConditionalModule):
         pass
 
 
+def key_putter(folder, file, save):
+    """Builds the Icetray for one file
+    """
+    tray = I3Tray()
+    
+    tray.Add("I3Reader","source", filename = os.path.join(folder,filename)) #SkipKeys
 
+
+    tray.AddModule(TrueMuonEnergy)
+    tray.AddModule(ACEPredictor, "addingCombiEnergy", model_path =  model_path)
+
+    tray.Add("I3Writer", Filename = os.path.join(save,filename))
+    tray.Execute()
+    tray.Finish()
     
 if __name__ == '__main__':
     
@@ -161,29 +186,127 @@ if __name__ == '__main__':
     
     args = parse_arguments()    
     model_path = os.path.join(full_path, "trained_models", args.model)
-    config_path = os.path.join(full_path, "config", "files", args.feature_config)   
-    folder = args.loadpath
+    #config_path = os.path.join(full_path, "config", "files", args.feature_config)   #remove
     save = args.savepath
     
+    print("files are being saved at {} with keys ACEnergy_Truth and ACEnergy_Prediction".format(save))
+
+    
+    if args.loadfiles is not None:
+        files = args.loadfiles
+        outname = args.batchname #[0] is the head, [1] is tail
+        if not outname.endswith(".i3.zst"):
+            outname += ".i3.zst"
+        elif outname.endswith(".i3"):
+            outname += ".zst"
+        
+        print("files being read are like {}".format(str(files[0])))
+        tray = I3Tray()
+
+        tray.Add("I3Reader","source", filenamelist = files) #SkipKeys
+
+        tray.AddModule(TrueMuonEnergy)
+        tray.AddModule(ACEPredictor, "addingCombiEnergy", model_path =  model_path)
+
+        tray.Add("I3Writer", Filename = os.path.join(save,outname))
+        tray.Execute()
+        tray.Finish()
+
+    if args.loadpath is not None:
+        folder = args.loadpath
+        print("all files from {} are being read".format(folder))
+        nfiles = 10
+        filenamelist = []
+        for filename in os.listdir(folder):
+            if filename.endswith(".i3.zst"):
+                filenamelist.append(os.path.join(filename))
+
+
+        file_chunks = [filenamelist[x:x+nfiles] for x in range(0, len(filenamelist), nfiles)]
+        print("File chunks look like this:")
+        print(file_chunks[0])
+        print("---")
+        print(file_chunks[1])
+        for chunk_idx, chunk in enumerate(file_chunks):
+            print("Working on chunk No. {} --- {}".format(str(chunk_idx), str(chunk)))
+
+            filepaths = ([os.path.join(folder, file) for file in chunk])
+            outname = "chunk_"+str(chunk_idx)+"_nfiles_"+str(len(filepaths))+".i3.zst"
+            print(outname)
+
+            tray = I3Tray()
+
+            tray.Add("I3Reader","source", filenamelist = filepaths) #SkipKeys
+
+            tray.AddModule(TrueMuonEnergy)
+            tray.AddModule(ACEPredictor, "addingCombiEnergy", model_path =  model_path)
+
+            tray.Add("I3Writer", Filename = os.path.join(save,outname))
+            tray.Execute()
+            tray.Finish()
+                    
+    '''
+    folder = args.loadpath
+
+    nfiles = args.n_i3batch
+    files = args.loadfiles
     print("model loaded from {}".format(model_path))
     print("files are being read from {}".format(folder))
     print("files are being saved at {} with keys ACEnergy_Truth and ACEnergy_Prediction".format(save))
 
+    
+    tray = I3Tray()
+
+    tray.Add("I3Reader","source", filenamelist = files) #SkipKeys
+
+    tray.AddModule(TrueMuonEnergy)
+    tray.AddModule(ACEPredictor, "addingCombiEnergy", model_path =  model_path)
+
+    tray.Add("I3Writer", Filename = os.path.join(save,outname))
+    tray.Execute()
+    tray.Finish()
+    '''
+    
+    """
     filenamelist = []
     for filename in os.listdir(folder):
         if filename.endswith(".i3.zst"):
             filenamelist.append(os.path.join(filename))
+    
 
-    for filename in filenamelist:
-        print(filename)
+    file_chunks = [filenamelist[x:x+nfiles] for x in range(0, len(filenamelist), nfiles)]
+    print("File chunks look like this:")
+    print(file_chunks[0])
+    print("---")
+    print(file_chunks[1])
+    for chunk_idx, chunk in enumerate(file_chunks):
+        print("Working on chunk No. {} --- {}".format(str(chunk_idx), str(chunk)))
+
+        filepaths = ([os.path.join(folder, file) for file in chunk])
+        outname = "chunk_"+str(chunk_idx)+"_nfiles_"+str(len(filepaths))+".i3.zst"
+        print(outname)
+        
         tray = I3Tray()
 
-        tray.Add("I3Reader","source", filename = os.path.join(folder,filename)) #SkipKeys
+        tray.Add("I3Reader","source", filenamelist = filepaths) #SkipKeys
 
-        
         tray.AddModule(TrueMuonEnergy)
         tray.AddModule(ACEPredictor, "addingCombiEnergy", model_path =  model_path)
 
-        tray.Add("I3Writer", Filename = os.path.join(save,filename))
+        tray.Add("I3Writer", Filename = os.path.join(save,outname))
         tray.Execute()
         tray.Finish()
+    """
+    #for filename in filenamelist:
+    #    print(filename)
+    #    tray = I3Tray()
+
+    #    tray.Add("I3Reader","source", filename = os.path.join(folder,filename)) #SkipKeys
+
+        
+    #    tray.AddModule(TrueMuonEnergy)
+    #    tray.AddModule(ACEPredictor, "addingCombiEnergy", model_path =  model_path)
+
+    #    tray.Add("I3Writer", Filename = os.path.join(save,filename))
+    #    tray.Execute()
+    #    tray.Finish()

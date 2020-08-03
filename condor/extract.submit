@@ -1,0 +1,12 @@
+getenv = True
+
+executable = /home/pfuerst/master_thesis/software/combienergy/scripts/extractor.py
+arguments = --pathlist_config DEBUG_pathlist.yaml --name_out_pckl /data/user/pfuerst/DELETE_test/training_dataframe01000.pkl
+initialdir = /home/pfuerst
+log = /scratch/pfuerst/submit_logs/extractor.log
+output = /data/user/pfuerst/condor/condorlogs/extractor.out
+error  = /data/user/pfuerst/condor/condorlogs/extractor.out
+
+RequestMemory = 5000
+
+queue 1
