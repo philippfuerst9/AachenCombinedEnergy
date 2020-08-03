@@ -94,13 +94,13 @@ if __name__ == '__main__':
     y = np.log10(y) # E_entry is in true energy
 
     #split test set which will be saved (with prediction) as dataframe
-    X_train, X_test, y_train, y_test = train_test_split(cut_dict, y, test_size = args.test_split_size, random_state=123)
+    X_train, X_test, y_train, y_test = train_test_split(cut_dict, y, test_size = args.test_split_size) #set random_state=123 for reproducibility
 
     X_save = X_test
 
     #split evaluation set to watch during training
     valid_size = 0.2
-    X_train, X_eval, y_train, y_eval = train_test_split(X_train, y_train, test_size = valid_size, random_state = 123)
+    X_train, X_eval, y_train, y_eval = train_test_split(X_train, y_train, test_size = valid_size)
 
     #load feature config
     features = yaml.load(open(config_path,'r'), Loader = yaml.SafeLoader)
