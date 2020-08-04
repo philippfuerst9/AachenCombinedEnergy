@@ -35,10 +35,16 @@ import scripts.tools.segmented_muon_energy as sme
 def parse_arguments():
     """argument parser to specify configuration"""
     parser = argparse.ArgumentParser()
-    parser.add_argument(
+    
+    group = parser.add_mutually_exclusive_group(required = True)
+
+    group.add_argument(
         "--pathlist_config", type=str,
-        default = 'i3_pathlist_v2.yaml',
+        #default = 'i3_pathlist_v2.yaml',
         help="config .yaml containing python list of paths to i3 files")
+    group.add_argument("--pathlist", type = str, nargs="+",
+                       help = "if no config .yaml is built, you can also just supply list of filenames.")
+
     #/home/pfuerst/master_thesis/software/BDT_energy_reconstruction/config/files/
     parser.add_argument(
         "--name_out_pckl", type = str,
@@ -80,7 +86,9 @@ def feature_extractor(frame):
     #"E_dnn"               : frame["TUM_dnn_energy"]["mu_E_on_entry"],        
     "random_variable"     : np.random.random()*10,
     "E_entry"             : frame["TrueMuoneEnergyAtDetectorEntry"].value,   #e_entry
-    "E_exit"              : frame["TrueMuoneEnergyAtDetectorLeave"].value    #e_exit
+    "E_exit"              : frame["TrueMuoneEnergyAtDetectorLeave"].value,    #e_exit
+    #comment this for i3 files w/o prediction.
+    "E_predicted"         : frame["ACEnergy_Prediction"].value 
     } 
     
     try:
@@ -100,9 +108,14 @@ if __name__ == '__main__':
     args = parse_arguments()    
     #pathname = os.path.dirname(sys.argv[0])     
     #full_path =  os.path.abspath(pathname)
-    config_path = os.path.join(full_path, "config","files", args.pathlist_config)
-    print(config_path)
-    pathlist = yaml.load(open(config_path,'r'), Loader = yaml.SafeLoader)
+    if args.pathlist_config is not None:
+        config_path = os.path.join(full_path, "config","files", args.pathlist_config)
+        print(config_path)
+        pathlist = yaml.load(open(config_path,'r'), Loader = yaml.SafeLoader)
+    
+    if args.pathlist is not None:
+        pathlist = args.pathlist
+    
     print(pathlist)
     list_of_featuredicts = []
     for path in pathlist:
@@ -111,7 +124,7 @@ if __name__ == '__main__':
         for filename in os.listdir(path):
             if filename.endswith(".i3.zst"):
                 print("processing file {}".format(filename))
-                with dataio.I3File(os.path.expanduser(path+filename)) as f:
+                with dataio.I3File(os.path.join(path,filename)) as f:
                     for currentframe in f:        
                         if str(currentframe.Stop) == "Physics":
                             featuredict = feature_extractor(currentframe)

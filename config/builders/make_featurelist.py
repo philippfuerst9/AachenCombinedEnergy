@@ -57,14 +57,6 @@ with open(name_L5_E_no_sigmapar, 'w') as file:
     yaml.dump(L5_E_nopar, file)
 print("file saved at {}".format(name_L5_E_no_sigmapar))
 
-
-#badtest = ["cog_rho","soos"]
-
-#badname = '../files/badtest.yaml'
-#with open(badname, 'w') as file:
-#    yaml.dump(badtest, file)
-#print("file saved at {}".format(badname))
-
 # -----  any other custom config. If you want to add new features use add_features.py ----- #
 
 #custom_list = []
