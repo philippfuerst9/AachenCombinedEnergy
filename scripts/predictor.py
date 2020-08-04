@@ -39,7 +39,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model",
                 type=str,
-                default = 'PICKLED_rmse_combienergy_N2500_L5_E.model',
+                default = 'PICKLE_rmse_ACE_nosig_N2500_L5_E_no_sigmapar_0.2.model',
                 help="trained xgboost model used for prediction.")
 
     #parser.add_argument("--feature_config",
@@ -141,8 +141,9 @@ class ACEPredictor(icetray.I3ConditionalModule):
         features = feature_extractor(frame)
         pandasframe = pd.DataFrame(data = features, index = [0])  #dataframe with one-line needs an index
         truth = pandasframe["E_entry"][0]
-        cleanframe = pandasframe.drop(columns = ["E_entry", "E_exit"])
-        cleanframe = cleanframe[self.model_list]   #this is superduper important. 
+        #shouldnt even be necessary as it really takes only its features in the correct order
+        #cleanframe = pandasframe.drop(columns = ["E_entry", "E_exit"]) #drop sigma_paraboloid.
+        cleanframe = pandasframe[self.model_list]   #this is superduper important. 
         datamatrix = xgb.DMatrix(data = cleanframe)
         prediction = self.model.predict(datamatrix)
         prediction= 10**(prediction[0].astype(np.float64))
