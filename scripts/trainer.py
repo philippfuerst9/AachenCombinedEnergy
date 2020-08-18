@@ -30,7 +30,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--pandas_dataframe", type=str,
-        default = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/features_dataframe_11029_11060_11070_withNaN_v2_coherent.pkl",
+        default = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/11029_11069_11070_wWeights.pickle",
         help="dataframe created by extractor.py")
     parser.add_argument(
         "--feature_config", type = str,
@@ -53,7 +53,7 @@ def parse_arguments():
     parser.add_argument(
         "--learning_rate", type=float, default=0.03)
     parser.add_argument(
-        "--early_stopping_rounds", type=int, default=10)
+        "--early_stopping_rounds", type=int, default=200)
     parser.add_argument(
         "--subsample", type=float, default=0.8)
     parser.add_argument(
@@ -61,12 +61,12 @@ def parse_arguments():
     parser.add_argument(
         "--colsample_bytree", type = float, default = 1.0)
     parser.add_argument(
-        "--min_child_weight", type = float, default = 10)
+        "--min_child_weight", type = float, default = 100)
     parser.add_argument(
-        "--num_rounds", type=int, default = 2000,
+        "--num_rounds", type=int, default = 2500,
         help="number of boosting rounds")
     parser.add_argument(
-        "--test_split_size", type = float, default = 0.2,
+        "--test_split_size", type = float, default = 0.4,
         help="percent of data used for testing, i.e. amount of data with predicted energies")
     parser.add_argument(
         "--objective", type = str, default = "rmse", #'pshedelta'
@@ -75,22 +75,37 @@ def parse_arguments():
     parser.add_argument(
         "--delta", type = float, default = 3,
         help = "for huber loss slope")
+    
+    parser.add_argument(
+        "--use_weights", action="store_true",
+        help="Uses OneWeights x 1e-18 as event weights. Make sure they are stored in the pandas_dataframe.")
     args = parser.parse_args()
     return args
 
+def one_weight_builder(prime_E, prime_Type, prime_coszen, total_weight, 
+                       ds_nums = [11029, 11069, 11070],
+                       ds_nfiles = [3190, 3920, 997]):      
+    """builds OneWeights when combining different sim sets.
+    prime_E: ["MCPrimary1"].energy
+    prime_Type: ["MCPrimary1"].type
+    prime_coszen: cos(["MCPrimary1"].dir.zenith)
+    total_weight: ["I3MCWeightDict"]["TotalInteractionProbabilityWeight"]
+    returns the OneWeight for this specific event
+    """
+    generator_sum = np.sum([from_simprod(ds_num) * ds_nfiles[i] for i, ds_num in enumerate(ds_nums)])
+    return generator_sum(prime_E, particle_type = prime_Type, cos_theta = prime_coszen) * total_weight
 
 if __name__ == '__main__':
     args = parse_arguments()  
 
     config_path = os.path.join(full_path, "config","files", args.feature_config)
+    
+    #cosmetics to build xgboost.DMatrix object from Pandas.DataFrame object
 
     full_dict = pd.read_pickle(args.pandas_dataframe)
     #remove zeros and NaNs from label array as these cant be handled by xgboost. 
     cut_dict = full_dict.replace(to_replace = {"E_entry": 0.0}, value = pd.np.nan).dropna()
-    
-
     y = cut_dict[args.label_key]
-
     y = np.log10(y) # E_entry is in true energy
 
     #split test set which will be saved (with prediction) as dataframe
@@ -102,14 +117,28 @@ if __name__ == '__main__':
     valid_size = 0.2
     X_train, X_eval, y_train, y_eval = train_test_split(X_train, y_train, test_size = valid_size)
 
+    #handle weighted training
+    w_train, w_eval, w_test = None, None, None    
+    
+    if "OneWeight" in cut_dict.keys():
+        w_train = X_train["OneWeight"]
+        w_eval  = X_eval["OneWeight"]
+        w_test  = X_test["OneWeight"]
+        
+    elif "OneWeight" not in cut_dict.keys():
+        print("No weights in pandas dataframe detected.")
+        if args.use_weights == True:
+            raise KeyError("OneWeight flag was set but no weights found in dataframe!")
+
+        
     #load feature config
     features = yaml.load(open(config_path,'r'), Loader = yaml.SafeLoader)
     for key in features:
         if key not in full_dict.keys():
             print("key not found in pickle file!")
-            raise KeyError("trying to use a feature not contained in loaded data")
-    
-    #only take features from feature config
+            raise KeyError("trying to use a feature not contained in loaded data!")
+
+    #only keep features from feature config
     drop_keys = []
     for key in full_dict.keys():
         if key not in features:
@@ -124,12 +153,18 @@ if __name__ == '__main__':
     validation_datamatrix = xgb.DMatrix(data = X_eval,  label = y_eval )
     testing_datamatrix    = xgb.DMatrix(data = X_test,  label = y_test )
 
+    if args.use_weights == True:
+        training_datamatrix.set_weight(w_train)
+        validation_datamatrix.set_weight(w_eval)
+        testing_datamatrix.set_weight(w_test)
+        print("BDT training using OneWeights as weights.")
+    elif args.use_weights == False:
+        print("BDT training on unweighted simulation data.")
     param = {'booster':                'gbtree',
-             #'verbosity':              0,
+             'verbosity':              3,
              'max_depth':              args.max_depth,
              'eta':                    args.learning_rate,
              #'eval_metric':            args.eval_metrices,
-             'early_stopping_rounds':  args.early_stopping_rounds,
              'subsample':              args.subsample,
              'disable_default_eval_metric':1
             }
@@ -142,13 +177,13 @@ if __name__ == '__main__':
 
     evals_result = {}
     
-    #messy way to pick the defined loss function
+    #pick custom loss function
     if args.objective == "rmse":
         obj   = func.rmse
         feval = func.rmse_err
         
     elif args.objective == "pshe":
-        obj   = funcpseudo_huber_loss
+        obj   = func.pseudo_huber_loss
         feval = func.pseudo_huber_loss_err
         
     elif args.objective == "pshedelta":
@@ -168,7 +203,9 @@ if __name__ == '__main__':
     print("starting training of "+args.modelname+", max rounds: "+str(args.num_rounds)+" ... ")
     
     #train a booster
-    model = xgb.train(params = param, dtrain=training_datamatrix, num_boost_round = args.num_rounds, obj = obj, feval = feval, evals = watchlist,evals_result = evals_result)
+    model = xgb.train(params = param, dtrain=training_datamatrix, num_boost_round = args.num_rounds,
+                      early_stopping_rounds = args.early_stopping_rounds,
+                      obj = obj, feval = feval, evals = watchlist,evals_result = evals_result)
     
     #save model
     mobj = str(args.objective)
@@ -187,7 +224,7 @@ if __name__ == '__main__':
     
     pickle.dump(model, open(os.path.join(full_path, "trained_models", modelname),"wb"))
 
-    #save energy predictions. All testing/validation data get a NaN entry.
+    #save energy predictions.
     ypred = model.predict(testing_datamatrix)
 
 

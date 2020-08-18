@@ -50,10 +50,18 @@ def parse_arguments():
         "--name_out_pckl", type = str,
         default = '/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/features_dataframe_11029_11060_11070_withNaN_v2_coherent.pkl',
         help= "path+name of the produced full pickle file")
+    
+    parser.add_argument(
+        "--wACE", action = "store_true",
+        help="flag to extract predicted energies.")
+    
+    parser.add_argument(
+        "--weights", action = "store_true",
+        help="flag to extract OneWeights and NSimulatedEvents of the i3 file.")
     args = parser.parse_args()
     return args
 
-def feature_extractor(frame):
+def feature_extractor(frame, wACE=False, weights = False):
     """reads feature keys from frame into a dictionary
     
     Energies are in log10[GeV], except for energy entry/exit as exit can be 0
@@ -88,9 +96,14 @@ def feature_extractor(frame):
     "E_entry"             : frame["TrueMuoneEnergyAtDetectorEntry"].value,   #e_entry
     "E_exit"              : frame["TrueMuoneEnergyAtDetectorLeave"].value,    #e_exit
     #comment this for i3 files w/o prediction.
-    "E_predicted"         : frame["ACEnergy_Prediction"].value 
+    #"E_predicted"         : frame["ACEnergy_Prediction"].value 
     } 
-    
+    if wACE == True:
+        features["E_predicted"] = frame["ACEnergy_Prediction"].value
+        
+    if weights == True:
+        features["OneWeight"] = frame["I3MCWeightDict"]["OneWeight"]
+        features["NEvent"] = frame["I3MCWeightDict"]["NEvents"]
     try:
         features["E_truncated"]   = np.log10(frame["SplineMPEICTruncatedEnergySPICEMie_AllDOMS_Muon"].energy)
     except:
@@ -106,8 +119,8 @@ def feature_extractor(frame):
 if __name__ == '__main__':
     
     args = parse_arguments()    
-    #pathname = os.path.dirname(sys.argv[0])     
-    #full_path =  os.path.abspath(pathname)
+    wACE_bool = args.wACE
+    weights_bool = args.weights
     if args.pathlist_config is not None:
         config_path = os.path.join(full_path, "config","files", args.pathlist_config)
         print(config_path)
@@ -127,7 +140,7 @@ if __name__ == '__main__':
                 with dataio.I3File(os.path.join(path,filename)) as f:
                     for currentframe in f:        
                         if str(currentframe.Stop) == "Physics":
-                            featuredict = feature_extractor(currentframe)
+                            featuredict = feature_extractor(currentframe, wACE = wACE_bool, weights = weights_bool)
                             list_of_featuredicts.append(featuredict)
 
 
