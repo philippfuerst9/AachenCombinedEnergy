@@ -17,20 +17,22 @@ from   sklearn.model_selection import train_test_split
 import yaml
 import xgboost as xgb
 
+# -- icecube software --
+from icecube.weighting.weighting import from_simprod
+
 # -- custom imports --
-#this is hardcoded and sad. Find another way that still works on condor 
 full_path = "/home/pfuerst/master_thesis/software/combienergy"
 sys.path.append(os.path.join(full_path))
 import scripts.tools.loss_functions as func
 
 
-
 def parse_arguments():
     """argument parser to specify configuration"""
+    
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--pandas_dataframe", type=str,
-        default = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/11029_11069_11070_wWeights.pickle",
+        default = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/2012_frames/full2012.pickle",
         help="dataframe created by extractor.py")
     parser.add_argument(
         "--feature_config", type = str,
@@ -66,7 +68,7 @@ def parse_arguments():
         "--num_rounds", type=int, default = 2500,
         help="number of boosting rounds")
     parser.add_argument(
-        "--test_split_size", type = float, default = 0.4,
+        "--test_split_size", type = float, default = 0.1,
         help="percent of data used for testing, i.e. amount of data with predicted energies")
     parser.add_argument(
         "--objective", type = str, default = "rmse", #'pshedelta'
@@ -86,50 +88,51 @@ def one_weight_builder(prime_E, prime_Type, prime_coszen, total_weight,
                        ds_nums = [11029, 11069, 11070],
                        ds_nfiles = [3190, 3920, 997]):      
     """builds OneWeights when combining different sim sets.
+    the generator is basically the #events per energy range
     prime_E: ["MCPrimary1"].energy
     prime_Type: ["MCPrimary1"].type
     prime_coszen: cos(["MCPrimary1"].dir.zenith)
     total_weight: ["I3MCWeightDict"]["TotalInteractionProbabilityWeight"]
     returns the OneWeight for this specific event
     """
+    
     generator_sum = np.sum([from_simprod(ds_num) * ds_nfiles[i] for i, ds_num in enumerate(ds_nums)])
-    return generator_sum(prime_E, particle_type = prime_Type, cos_theta = prime_coszen) * total_weight
+    return total_weight / (generator_sum(prime_E, particle_type = prime_Type, cos_theta = prime_coszen)*prime_E)
+
+def cleaner(pandasframe):
+    """removes 0.0 and NaN"""
+    
+    cleanframe = pandasframe.replace(to_replace = {"E_entry": 0.0}, value = pd.np.nan).dropna()
+    return cleanframe
 
 if __name__ == '__main__':
-    args = parse_arguments()  
-
-    config_path = os.path.join(full_path, "config","files", args.feature_config)
     
-    #cosmetics to build xgboost.DMatrix object from Pandas.DataFrame object
-
+    args = parse_arguments()  
+    config_path = os.path.join(full_path, "config","files", args.feature_config)
     full_dict = pd.read_pickle(args.pandas_dataframe)
-    #remove zeros and NaNs from label array as these cant be handled by xgboost. 
-    cut_dict = full_dict.replace(to_replace = {"E_entry": 0.0}, value = pd.np.nan).dropna()
+    
+    cut_dict = cleaner(full_dict)
     y = cut_dict[args.label_key]
     y = np.log10(y) # E_entry is in true energy
 
+    #build weights    
+    weights = one_weight_builder(cut_dict["MCPrimaryEnergy"], cut_dict["MCPrimaryType"], 
+                                 cut_dict["MCPrimaryCosZen"], cut_dict["TIntProbW"])
+    cut_dict.insert(5,"generator_weights", weights)
+    
     #split test set which will be saved (with prediction) as dataframe
-    X_train, X_test, y_train, y_test = train_test_split(cut_dict, y, test_size = args.test_split_size) #set random_state=123 for reproducibility
-
+    #set random_state=123 for reproducibility
+    X_train, X_test, y_train, y_test = train_test_split(cut_dict, y, test_size = args.test_split_size) 
     X_save = X_test
 
     #split evaluation set to watch during training
     valid_size = 0.2
     X_train, X_eval, y_train, y_eval = train_test_split(X_train, y_train, test_size = valid_size)
 
-    #handle weighted training
-    w_train, w_eval, w_test = None, None, None    
-    
-    if "OneWeight" in cut_dict.keys():
-        w_train = X_train["OneWeight"]
-        w_eval  = X_eval["OneWeight"]
-        w_test  = X_test["OneWeight"]
-        
-    elif "OneWeight" not in cut_dict.keys():
-        print("No weights in pandas dataframe detected.")
-        if args.use_weights == True:
-            raise KeyError("OneWeight flag was set but no weights found in dataframe!")
-
+    #isolate weights before cleaning dataframes
+    w_train = X_train["generator_weights"]
+    w_eval  = X_eval["generator_weights"]
+    w_test  = X_test["generator_weights"]
         
     #load feature config
     features = yaml.load(open(config_path,'r'), Loader = yaml.SafeLoader)
@@ -138,12 +141,11 @@ if __name__ == '__main__':
             print("key not found in pickle file!")
             raise KeyError("trying to use a feature not contained in loaded data!")
 
-    #only keep features from feature config
+    #only keep features from feature config in xgboost datamatrices
     drop_keys = []
-    for key in full_dict.keys():
+    for key in cut_dict.keys():
         if key not in features:
             drop_keys.append(key)
-    feature_dict = full_dict.drop(columns = drop_keys)
 
     X_train = X_train.drop(columns = drop_keys)
     X_eval  = X_eval.drop(columns  = drop_keys)
@@ -153,13 +155,17 @@ if __name__ == '__main__':
     validation_datamatrix = xgb.DMatrix(data = X_eval,  label = y_eval )
     testing_datamatrix    = xgb.DMatrix(data = X_test,  label = y_test )
 
+    #handle weighting flag
     if args.use_weights == True:
         training_datamatrix.set_weight(w_train)
         validation_datamatrix.set_weight(w_eval)
         testing_datamatrix.set_weight(w_test)
-        print("BDT training using OneWeights as weights.")
+        print("BDT training using generated OneWeights as weights.")
+        
     elif args.use_weights == False:
         print("BDT training on unweighted simulation data.")
+    
+    #build BDT parameter space
     param = {'booster':                'gbtree',
              'verbosity':              3,
              'max_depth':              args.max_depth,
@@ -172,7 +178,6 @@ if __name__ == '__main__':
     if args.gpu == True:
         param['tree_method'] = 'gpu_hist'
         
-    
     watchlist = [(training_datamatrix, 'train'),(validation_datamatrix, 'eval')]
 
     evals_result = {}
@@ -202,7 +207,12 @@ if __name__ == '__main__':
     print(training_datamatrix.feature_names)
     print("starting training of "+args.modelname+", max rounds: "+str(args.num_rounds)+" ... ")
     
-    #train a booster
+    #cleanup
+    del full_dict
+    del cut_dict
+    del weights
+    
+    #train booster
     model = xgb.train(params = param, dtrain=training_datamatrix, num_boost_round = args.num_rounds,
                       early_stopping_rounds = args.early_stopping_rounds,
                       obj = obj, feval = feval, evals = watchlist,evals_result = evals_result)
@@ -226,11 +236,8 @@ if __name__ == '__main__':
 
     #save energy predictions.
     ypred = model.predict(testing_datamatrix)
-
-
     X_save["E_predicted"]  = ypred
     savepath = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/withBDT/"
-
     X_save.to_pickle(savepath+"modeldata_"+modelname+'.pkl')
     print("prediction saved at "+savepath+"modeldata_"+modelname+'.pkl')
 

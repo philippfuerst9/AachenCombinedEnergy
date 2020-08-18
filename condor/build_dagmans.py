@@ -48,3 +48,32 @@ for chunk in file_chunks:
     dag.add(name= "JOB_"+str(jobnr),params = 'SAVEPATH="%s" LOADFILES="%s" BATCHNAME="%s"'%(out, loadfilestr, batchname))
 
 dag.write("/home/pfuerst/master_thesis/software/combienergy/condor/predict_21002.dag")
+
+
+#dagman to extract all 2012 data to pandas dataframes
+dag = DagScript(submitScript = ("/scratch/pfuerst/combienergy/condor/extractors/dagman/extract.submit"))
+source = "/data/ana/Diffuse/IC2010-2014_NuMu/IC86-2012/datasets/finallevel/sim/2012/neutrino-generator/wPS_variables/"
+folders = ["11029", "11069", "11070"]
+outfolder = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/2012_frames/"
+nfiles = 20
+jobnr = 0
+file_chunks_list = []
+for folder in folders:
+    filenamelist = []
+    for filename in os.listdir(os.path.join(source,folder)):
+        if filename.endswith(".i3.zst"):
+            filenamelist.append(os.path.join(source,folder,filename))
+    file_chunks = [filenamelist[x:x+nfiles] for x in range(0, len(filenamelist), nfiles)]
+    file_chunks_list+=file_chunks
+
+for chunk in file_chunks_list:
+    loadfilestr = ""
+    for file in chunk:
+        print(file)
+        loadfilestr+=(str(file)+" ")
+    jobnr+=1
+    #batchname = "batch_"+str(jobnr)+"_"+chunk[0][107:112]
+    batchname = "batch_{:03d}_{}".format(jobnr, chunk[0][107:112])
+    dag.add(name = "JOB_"+str(jobnr), params = 'FILENAMELIST="%s" WRITE="%s" BATCHNAME="%s"'%(loadfilestr, outfolder+batchname, batchname))
+
+dag.write("/home/pfuerst/master_thesis/software/combienergy/condor/extract2012.dag")
