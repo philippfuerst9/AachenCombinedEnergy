@@ -1,0 +1,10 @@
+executable = /home/pfuerst/master_thesis/software/combienergy/scripts/extractor.py
+arguments = --filenamelist $(FILENAMELIST) --write $(WRITE) --wACE
+initialdir = /home/pfuerst
+log = /scratch/pfuerst/submit_logs/$(BATCHNAME).log
+output = /data/user/pfuerst/condor/condorlogs/$(BATCHNAME).out
+error  = /data/user/pfuerst/condor/condorlogs/$(BATCHNAME).err
+
+RequestMemory = 2000
+
+queue 1

@@ -1,12 +1,11 @@
-getenv = True
 should_transfer_files = yes
 executable = /home/pfuerst/master_thesis/software/combienergy/scripts/trainer.py
-arguments = --num_rounds 2500 --modelname ACE_nosig --gpu --objective rmse 
+arguments  = --num_rounds 2500 --modelname my_modelname --gpu --objective rmse 
 initialdir = /home/pfuerst
-log = /scratch/pfuerst/submit_logs/combi_trainer.log
-output = /data/user/pfuerst/condor/condorlogs/combi_trainer.out
-error  = /data/user/pfuerst/condor/condorlogs/combi_trainer.err
+log        = /scratch/pfuerst/submit_logs/combi_trainer.log
+output     = /data/user/pfuerst/condor/condorlogs/combi_trainer.out
+error      = /data/user/pfuerst/condor/condorlogs/combi_trainer.err
 
 request_gpus = 1
-RequestMemory = 5000
+RequestMemory = 4500
 queue 1

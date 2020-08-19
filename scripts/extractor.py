@@ -91,10 +91,10 @@ def feature_extractor(frame, wACE=False):
     "E_dnn"               : frame["TUM_dnn_energy_hive"]["mu_E_on_entry"],
     "random_variable"     : np.random.random()*10,
     "E_entry"             : frame["TrueMuoneEnergyAtDetectorEntry"].value,   #e_entry
-    "E_exit"              : frame["TrueMuoneEnergyAtDetectorLeave"].value,    #e_exit
+    "E_exit"              : frame["TrueMuoneEnergyAtDetectorLeave"].value,   #e_exit
     "OneWeight"           : frame["I3MCWeightDict"]["OneWeight"],
     "NEvent"              : frame["I3MCWeightDict"]["NEvents"],
-    "TIntProbW"           : frame["I3MCWeightDict"]["TotalInteractionProbabilityWeight"],
+    "TIntProbW"           : frame["I3MCWeightDict"]["TotalWeight"],          #TotalInteractionProbabilityWeight for 2012
     "MCPrimaryEnergy"     : frame["MCPrimary1"].energy,
     "MCPrimaryType"       : frame["MCPrimary1"].type,
     "MCPrimaryCosZen"     : np.cos(frame["MCPrimary1"].dir.zenith)

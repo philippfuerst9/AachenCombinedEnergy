@@ -39,7 +39,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model",
                 type=str,
-                default = 'PICKLE_rmse_ACE_nosig_N2500_L5_E_no_sigmapar_0.2.model',
+                default = "PICKLE_pshedelta_winner_N5000_L5_E_no_sigmapar_0.1.model",
                 help="trained xgboost model used for prediction.")
 
     #parser.add_argument("--feature_config",
