@@ -1,6 +1,12 @@
 #!/bin/sh /cvmfs/icecube.opensciencegrid.org/py3-v4.1.0/icetray-start
 #METAPROJECT /home/pfuerst/i3_software_py3/combo/build
 
+"""
+Trains an xgboost booster model with a custom configuration
+on feature data from extractor.py. 
+Saves the model and Loss curve + Feature map plots in hardcoded directories.
+"""
+
 # -- internal packages -- 
 import argparse
 import matplotlib.pyplot as plt
@@ -100,7 +106,9 @@ def one_weight_builder(prime_E, prime_Type, prime_coszen, total_weight,
     return total_weight / (generator_sum(prime_E, particle_type = prime_Type, cos_theta = prime_coszen)*prime_E)
 
 def cleaner(pandasframe):
-    """removes 0.0 and NaN"""
+    """removes edge cases where calculation of MC truth fails 
+    (E_entry = 0.0 and NaN)
+    """
     
     cleanframe = pandasframe.replace(to_replace = {"E_entry": 0.0}, value = pd.np.nan).dropna()
     return cleanframe

@@ -1,6 +1,9 @@
 #!/bin/sh /cvmfs/icecube.opensciencegrid.org/py3-v4.1.0/icetray-start
 #METAPROJECT /home/pfuerst/i3_software_py3/combo/build
 
+"""
+Builds keys defined in feature_extractor from i3 files into one big pandas dataframe
+"""
 # -- internal packages -- 
 import argparse
 import math
@@ -43,7 +46,7 @@ def parse_arguments():
         #default = 'i3_pathlist_v2.yaml',
         help="config .yaml containing python list of paths to i3 files")
     group.add_argument("--pathlist", type = str, nargs="+",
-                       help = "path do directory containign i3 files.")
+                       help = "path do directory containing i3 files.")
     group.add_argument("--filenamelist", type = str, nargs="+",
                        help= "list of filenames ending with .i3.zst.")
 
