@@ -78,9 +78,9 @@ for chunk in file_chunks_list:
 dag.write("/home/pfuerst/master_thesis/software/combienergy/condor/extract2012.dag")
 
 #dagman to extract 2019 21124 data to pandas dataframes
-dag = DagScript(submitScript = ("/scratch/pfuerst/combienergy/condor/extractors/dagman/extract_prediction.submit"))
-source = "/data/user/pfuerst/Reco_Analysis/Diffuse_sim_2019_nugen_northern_tracks/21124/wACE/"
-outfolder = "/data/user/pfuerst/Reco_Analysis/Diffuse_sim_2019_nugen_northern_tracks/21124/wACE/pickled/"
+dag = DagScript(submitScript = ("/scratch/pfuerst/combienergy/condor/extractors/07-09-2020_extract2019_wXYcoords/extract_prediction.submit"))
+source = "/data/user/pfuerst/Reco_Analysis/Diffuse_sim_2019_nugen_northern_tracks/21124/wACE_wDNNexp/"
+outfolder = "/data/user/pfuerst/Reco_Analysis/Diffuse_sim_2019_nugen_northern_tracks/21124/wACE_wDNNexp/pickled/"
 nfiles = 20
 jobnr = 0
 file_chunks_list = []
@@ -97,15 +97,15 @@ for chunk in file_chunks_list:
     for file in chunk:
         loadfilestr+=(str(file)+" ")
     jobnr+=1
-    batchname = "batch_{:03d}_{}".format(jobnr, chunk[0][107:112])
+    batchname = "batch_{:03d}_{}".format(jobnr, nfiles)
     dag.add(name = "JOB_"+str(jobnr), params = 'FILENAMELIST="%s" WRITE="%s" BATCHNAME="%s"'%(loadfilestr, outfolder+batchname, batchname))
 dag.write("/home/pfuerst/master_thesis/software/combienergy/condor/extract21124.dag")
 
 
 #dagman to extract 2019 21002 data to pandas dataframes
-dag = DagScript(submitScript = ("/scratch/pfuerst/combienergy/condor/extractors/dagman/extract_prediction.submit"))
-source = "/data/user/pfuerst/Reco_Analysis/Diffuse_sim_2019_nugen_northern_tracks/21002/wACE/"
-outfolder = "/data/user/pfuerst/Reco_Analysis/Diffuse_sim_2019_nugen_northern_tracks/21002/wACE/pickled/"
+dag = DagScript(submitScript = ("/scratch/pfuerst/combienergy/condor/extractors/07-09-2020_extract2019_wXYcoords/extract_prediction.submit"))
+source = "/data/user/pfuerst/Reco_Analysis/Diffuse_sim_2019_nugen_northern_tracks/21002/wACE_wDNNexp/"
+outfolder = "/data/user/pfuerst/Reco_Analysis/Diffuse_sim_2019_nugen_northern_tracks/21002/wACE_wDNNexp/pickled/"
 nfiles = 20
 jobnr = 0
 file_chunks_list = []
