@@ -1,4 +1,4 @@
-from icecube import icetray, dataclasses, dataio
+from icecube import icetray, dataclasses, dataio, simclasses
 from icecube.icetray import I3Units
 import numpy as np
 

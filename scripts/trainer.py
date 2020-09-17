@@ -99,7 +99,8 @@ def one_weight_builder(prime_E, prime_Type, prime_coszen, total_weight,
     prime_Type: ["MCPrimary1"].type
     prime_coszen: cos(["MCPrimary1"].dir.zenith)
     total_weight: ["I3MCWeightDict"]["TotalInteractionProbabilityWeight"]
-    returns the OneWeight for this specific event
+    returns the OneWeight/E for this specific event, i.e. weighted with an 
+    E**-1 flux for constant weight in log bins
     """
     
     generator_sum = np.sum([from_simprod(ds_num) * ds_nfiles[i] for i, ds_num in enumerate(ds_nums)])

@@ -3,6 +3,7 @@
 
 """This program takes a trained model and a directory containing i3 files.
 It adds a model prediction and a true energy key to these files and saves them in another directory.
+By default also adds an exponated version of TUM DNN energy in GeV.
 """
 
 # -- internal packages -- 
@@ -41,33 +42,13 @@ def parse_arguments():
                         default = "PICKLE_pshedelta_winner_N5000_L5_E_no_sigmapar_0.1.model",
                         help="trained xgboost model used for prediction.")
 
-    parser.add_argument("-source",
-                        type = str, 
-                        required = True,
-                        help = "directory path containing i3 files to be predicted on.")
-
-    parser.add_argument("-dest",
-                        type = str,
-                        required = True,
-                        help = "directory where new i3 files with new keys should be saved.")
+    parser.add_argument("--infiles", type = str,
+                        nargs="+",
+                        help = "Input /path/to/file. If list, they will be batched.")
     
-    parser.add_argument("--loadfiles",
-                        nargs = "+", type = str,
-                        help = "list of filenames to be processed, can be batched into one file.")
-
-    parser.add_argument("--n_i3batch",
-                        type = int,
-                        default = 10,
-                        help = "No. of files to combine into new files if only directory is supplied.")
-    
-    parser.add_argument("--batching",
-                        action="store_true",
-                        help = "flag to batch i3 files into one bigger file.")
-    
-    parser.add_argument("--batchname", 
-                        type = str,
-                        required = ["--batching", "--loadfiles"] in sys.argv,
-                        help = "if --loadfiles and --batching is set, this is the batched i3 files name.")
+    parser.add_argument("--outfile",
+                        required = "--infile" in sys.argv, type = str,
+                        help = "/path/to/name_of_out_file. Directories will be created if necessary.")
     
     parser.add_argument("--no_prediction",
                        action="store_false",
@@ -85,19 +66,9 @@ def parse_arguments():
 
 def bdt_features(frame, wACE=False):
     """reads feature keys from frame into a dictionary
-    
-    Energies are in log10[GeV], except for energy at entry/exit as exit can be 0
-    returns all data necessary for correctly weighting events and training the BDT. 
+    take care to have this exactly like the feature_extractor from extractor.py for the BDT variables.
     """
-    #if true e key does not exist do this
-    #e_entry = np.NaN
-    #e_exit  = np.NaN
-    #try:
-    #    e_entry, e_exit = sme.EnergyAtEgdeNoMuonGun(frame)
 
-    #except:
-    #    pass
-    
     features = {
     "cog_rho"             : frame["L5_cog_rho"].value,
     "cog_z"               : frame["L5_cog_z"].value,
@@ -195,20 +166,20 @@ class ACEPredictor(icetray.I3ConditionalModule):
     def Physics(self,frame):
         """predicts Energy and writes it to a key
         It builds a feature list for the BDT to make the prediction on. 
-        If one of the input recos doesnt exist, it predicts np.NaN
+        If one of the input recos doesnt exist, it can still predict, see xgboosts docs.
         """
-            
         features = bdt_features(frame)
         pandasframe = pd.DataFrame(data = features, index = [0])  #dataframe with one-line needs an index
-        cleanframe = pandasframe[self.model_list]   #cleans the feature extractor list
+        cleanframe = pandasframe[self.model_list]   #removes all non-feature keys from feature list
 
-        if cleanframe["E_truncated"][0] == np.NaN or cleanframe["E_muex"][0] == np.NaN:
-            frame.Put("ACEnergy_Prediction", dataclasses.I3Double(np.NaN))
-        else:
-            datamatrix = xgb.DMatrix(data = cleanframe)
-            prediction = self.model.predict(datamatrix)
-            prediction= 10**(prediction[0].astype(np.float64))
-            frame.Put("ACEnergy_Prediction", dataclasses.I3Double(prediction))
+        #if cleanframe["E_truncated"][0] == np.NaN or cleanframe["E_muex"][0] == np.NaN:
+        #    frame.Put("ACEnergy_Prediction", dataclasses.I3Double(np.NaN))
+        #else:
+        datamatrix = xgb.DMatrix(data = cleanframe)
+        prediction = self.model.predict(datamatrix)
+        prediction= 10**(prediction[0].astype(np.float64))
+        frame.Put("ACEnergy_Prediction", dataclasses.I3Double(prediction))
+        
         self.PushFrame(frame)
 
     def DAQ(self,frame):
@@ -218,168 +189,62 @@ class ACEPredictor(icetray.I3ConditionalModule):
         del self.model
         pass
     
-def single_tray(source_dir, filename, dest_dir, model_path, addPred = True, addTruth = True, expDNN = True):
-    """Builds the Icetray for one file
-    """
-    
-    tray = I3Tray()
-    tray.Add("I3Reader","source", filename = os.path.join(source_dir,filename)) 
-
-    if addTruth:
-        tray.AddModule(TrueMuonEnergy, "addingCombiEnergTruth")
-    if expDNN:
-        tray.AddModule(Exponator, "addingDNNExp")
-    if addPred:
-        tray.AddModule(ACEPredictor, "addingCombiEnergy", model_path =  model_path)
-    
-    tray.Add("I3Writer", Filename = os.path.join(dest_dir,filename))
-    tray.Execute()
-    tray.Finish()
-    
-def batch_tray(filenamelist, dest_dir, model_path, batch_name, addPred = True, addTruth = True, expDNN = True):
-    """Builds the Icetray for a batch of files
-    """
-
-    tray = I3Tray()
-    tray.Add("I3Reader","source", filenamelist = filenamelist) 
-
-    if addTruth:
-        tray.AddModule(TrueMuonEnergy, "addingCombiEnergTruth")
-    if expDNN:
-        tray.AddModule(Exponator, "addingDNNExp")
-    if addPred:
-        tray.AddModule(ACEPredictor, "addingCombiEnergy", model_path =  model_path)
-    
-    tray.Add("I3Writer", Filename = os.path.join(dest_dir,batch_name))
-    tray.Execute()
-    tray.Finish()
-        
-    
 if __name__ == '__main__':
-    
     print("predictor started")
     
+    #parse arguments
     args = parse_arguments()    
     model_path = os.path.join(full_path, "trained_models", args.model)
-    source_dir = args.source 
-    dest_dir = args.dest
-
-    if not os.path.exists(dest_dir):
-        os.makedirs(dest_dir)
-    filenamelist = []
-    if args.loadfiles is not None:
-        filenamelist = args.loadfiles
-    else:
-        for filename in os.listdir(source_dir):
-            if filename.endswith(".i3.zst"):
-                filenamelist.append(os.path.join(filename))
-                
-    if args.batching:
-        print("i3 files will be batched")
-
-                        
+    infiles = args.infiles
+    
+    if not os.path.exists(os.path.split(args.outfile)[0]):
+        os.makedirs(os.path.split(args.outfile)[0])
+    
+    outfile = args.outfile
+    if outfile.endswith(".i3"):
+        outfile+=(".zst")
+    if not outfile.endswith(".i3.zst"):
+        outfile+=(".i3.zst")
+        
     pred_bool  = args.no_prediction
     truth_bool = args.no_truth
-    DNN_bool   = args.no_expDNN
+    DNN_bool   = args.no_expDNN   
     
     #check there is actually something to be done.
     if not any([pred_bool,truth_bool,DNN_bool]):
         print("All key-writing options were turned off. Exiting.")
         sys.exit()
-
-    print("files are being saved at {}".format(dest_dir))
         
-    #handle processing cases.
-    #case 1) supply dir and batching turned on.
-    if args.loadfiles is None and args.batching:
-        nfiles = args.n_i3batch
+    if len(infiles)==1:
+        infile = infiles[0]
+        print("i3 file will be saved at {}".format(outfile))
+        tray = I3Tray()
+        tray.Add("I3Reader","source", filename = infile) 
 
-        file_chunks = [filenamelist[x:x+nfiles] for x in range(0, len(filenamelist), nfiles)]
-        print("File chunks look like this:")
-        print(file_chunks[0])
-        for chunk_idx, chunk in enumerate(file_chunks):
-            print("Working on chunk No. {} --- {}".format(str(chunk_idx), str(chunk)))
-
-            filepaths = ([os.path.join(source_dir, file) for file in chunk])
-
-            outname = "chunk_{:04d}_nfiles_{}.i3.zst".format(chunk_idx, len(filepaths))
-            #outname = "chunk_"+str(chunk_idx)+"_nfiles_"+str(len(filepaths))+".i3.zst"
-            print(outname)
-            batch_tray(filepaths, dest_dir, model_path, outname, addPred = pred_bool, addTruth = truth_bool, expDNN = DNN_bool)
-            
-          
-    #case 3) supply filenamelist and batch them.
-    if args.loadfiles is not None and args.batching:
-        outname = args.batchname
-        if not outname.endswith(".i3.zst"):
-            outname+=".i3.zst"
-        elif outname.endswith(".i3"):
-            outname+=".zst"
-                      
-        filepaths = [os.path.join(source_dir, file) for file in filenamelist]
-        batch_tray(filepaths, dest_dir, model_path, outname, addPred = pred_bool, addTruth = truth_bool, expDNN = DNN_bool)
-    
-    #case 2) and 4) supply filenamelist or dir but dont batch them
-    if not args.batching:
-        for filename in filenamelist:
-            single_tray(source_dir, filename, dest_dir, model_path, addPred = pred_bool, addTruth = truth_bool, expDNN = DNN_bool)
-
-
-
-"""                 
-    if args.loadpath is not None:
-        folder = args.loadpath
-        print("all files from {} are being read".format(folder))
-        nfiles = 10
-        filenamelist = []
-        for filename in os.listdir(folder):
-            if filename.endswith(".i3.zst"):
-                filenamelist.append(os.path.join(filename))
-
-
-        file_chunks = [filenamelist[x:x+nfiles] for x in range(0, len(filenamelist), nfiles)]
-        print("File chunks look like this:")
-        print(file_chunks[0])
-        print("---")
-        print(file_chunks[1])
-        for chunk_idx, chunk in enumerate(file_chunks):
-            print("Working on chunk No. {} --- {}".format(str(chunk_idx), str(chunk)))
-
-            filepaths = ([os.path.join(folder, file) for file in chunk])
-            outname = "chunk_"+str(chunk_idx)+"_nfiles_"+str(len(filepaths))+".i3.zst"
-            print(outname)
-
-            tray = I3Tray()
-
-            tray.Add("I3Reader","source", filenamelist = filepaths) #SkipKeys
-
+        if truth_bool:
             tray.AddModule(TrueMuonEnergy, "addingCombiEnergTruth")
+        if DNN_bool:
             tray.AddModule(Exponator, "addingDNNExp")
+        if pred_bool:
             tray.AddModule(ACEPredictor, "addingCombiEnergy", model_path =  model_path)
 
-            tray.Add("I3Writer", Filename = os.path.join(save,outname))
-            tray.Execute()
-            tray.Finish()
-    
-    if args.loadfiles is not None:
-        files = args.loadfiles
-        outname = args.batchname #[0] is the head, [1] is tail
-        if not outname.endswith(".i3.zst"):
-            outname += ".i3.zst"
-        elif outname.endswith(".i3"):
-            outname += ".zst"
-        
-        print("files being read are like {}".format(str(files[0])))
-        tray = I3Tray()
-
-        tray.Add("I3Reader","source", filenamelist = files) #SkipKeys
-
-        tray.AddModule(TrueMuonEnergy, "addingCombiEnergTruth")
-        tray.AddModule(Exponator, "addingDNNExp")
-        tray.AddModule(ACEPredictor, "addingCombiEnergy", model_path =  model_path)
-
-        tray.Add("I3Writer", Filename = os.path.join(save,outname))
+        tray.Add("I3Writer", Filename = outfile)
         tray.Execute()
         tray.Finish()
+    
+    #if several are supplied they will be batched
+    elif len(infiles)>1:
+        print("i3 files will be batched to {}".format(outfile))
+        tray = I3Tray()
+        tray.Add("I3Reader","source", filenamelist = infiles) 
 
-"""
+        if truth_bool:
+            tray.AddModule(TrueMuonEnergy, "addingCombiEnergTruth")
+        if DNN_bool:
+            tray.AddModule(Exponator, "addingDNNExp")
+        if pred_bool:
+            tray.AddModule(ACEPredictor, "addingCombiEnergy", model_path =  model_path)
+
+        tray.Add("I3Writer", Filename = outfile)
+        tray.Execute()
+        tray.Finish()

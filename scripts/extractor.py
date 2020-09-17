@@ -2,7 +2,7 @@
 #METAPROJECT /home/pfuerst/i3_software_py3/combo/build
 
 """
-Builds keys defined in feature_extractor from i3 files into one big pandas dataframe
+Builds keys defined in feature_extractor from i3 files into pandas dataframe(s)
 """
 # -- internal packages -- 
 import argparse
@@ -100,7 +100,9 @@ def feature_extractor(frame, wACE=False):
     "TIntProbW"           : frame["I3MCWeightDict"]["TotalWeight"],          #TotalInteractionProbabilityWeight for 2012
     "MCPrimaryEnergy"     : frame["MCPrimary1"].energy,
     "MCPrimaryType"       : frame["MCPrimary1"].type,
-    "MCPrimaryCosZen"     : np.cos(frame["MCPrimary1"].dir.zenith)
+    "MCPrimaryCosZen"     : np.cos(frame["MCPrimary1"].dir.zenith),
+    "cog_x"               : frame["HitStatisticsValuesIC"].cog.x,
+    "cog_y"               : frame["HitStatisticsValuesIC"].cog.y,  
     } 
     
     if wACE == True:
