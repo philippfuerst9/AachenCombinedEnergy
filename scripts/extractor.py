@@ -1,4 +1,4 @@
-#!/bin/sh /cvmfs/icecube.opensciencegrid.org/py3-v4.1.0/icetray-start
+#!/bin/sh /cvmfs/icecube.opensciencegrid.org/py3-v4.1.1/icetray-start
 #METAPROJECT /home/pfuerst/i3_software_py3/combo/build
 
 """
@@ -7,7 +7,6 @@ Builds keys defined in feature_extractor from i3 files into pandas dataframe(s)
 # -- internal packages -- 
 import argparse
 import math
-import numpy   as np
 import os
 import pickle
 import sys
@@ -20,6 +19,7 @@ import sklearn #__version__ 0.23.1
 from   sklearn.model_selection import train_test_split
 import yaml
 import xgboost as xgb #__version__ 1.1.1
+import numpy   as np
 
 # -- icecube software --
 from icecube import dataio, dataclasses, icetray, common_variables, paraboloid
@@ -120,7 +120,28 @@ def feature_extractor(frame, wACE=False):
    
     return features
 
-def extract_from_pathlist(pathlist):
+def mean_event_position(p_frame, omgeo):
+    """takes list of I3 OMKeys and I3 omgeo object and returns the positions of all hit DOMs."""
+    
+    omkeys = p_frame["TWSRTHVInIcePulsesIC"].keys()
+    x_list = []
+    y_list = []
+    z_list = []
+    r_list = []
+    for omkey in omkeys:
+        x_list.append(omgeo[omkey].position.x)
+        y_list.append(omgeo[omkey].position.y)
+        z_list.append(omgeo[omkey].position.z)
+        r_list.append(np.sqrt(omgeo[omkey].position.x**2 + omgeo[omkey].position.y**2))
+    
+    x_mean = np.mean(x_list)
+    y_mean = np.mean(y_list)
+    z_mean = np.mean(z_list)
+    r_mean = np.mean(r_list)
+    returndict = {"x":x_mean,"y":y_mean,"z":z_mean, "r":r_mean}
+    return returndict
+
+def extract_from_pathlist(pathlist, omgeo):
     list_of_featuredicts = []
     
     for path in pathlist:
@@ -132,10 +153,15 @@ def extract_from_pathlist(pathlist):
                     for currentframe in f:        
                         if str(currentframe.Stop) == "Physics":
                             featuredict = feature_extractor(currentframe, wACE = wACE_bool)
+                            mean_position = mean_event_position(currentframe, omgeo)
+                            featuredict["mean_x"] = mean_position["x"]
+                            featuredict["mean_y"] = mean_position["y"]
+                            featuredict["mean_z"] = mean_position["z"]
+                            featuredict["mean_r"] = mean_position["r"]                      
                             list_of_featuredicts.append(featuredict)
     return list_of_featuredicts
 
-def extract_from_filenamelist(filenamelist):
+def extract_from_filenamelist(filenamelist, omgeo):
     list_of_featuredicts = []
     for filename in filenamelist:
         print("processing file {}".format(filename))
@@ -143,6 +169,11 @@ def extract_from_filenamelist(filenamelist):
             for currentframe in f:        
                 if str(currentframe.Stop) == "Physics":
                     featuredict = feature_extractor(currentframe, wACE = wACE_bool)
+                    mean_position = mean_event_position(currentframe, omgeo)
+                    featuredict["mean_x"] = mean_position["x"]
+                    featuredict["mean_y"] = mean_position["y"]
+                    featuredict["mean_z"] = mean_position["z"]
+                    featuredict["mean_r"] = mean_position["r"]  
                     list_of_featuredicts.append(featuredict)
     return list_of_featuredicts
                             
@@ -152,6 +183,12 @@ if __name__ == '__main__':
     wACE_bool = args.wACE
     name = args.write
     
+    GCD_2012_path = "/cvmfs/icecube.opensciencegrid.org/data/GCD/GeoCalibDetectorStatus_2012.56063_V0.i3.gz"
+    GCD_file = dataio.I3File(GCD_2012_path)
+    GCD_file.rewind()
+    G_frame = GCD_file.pop_frame()
+    omgeo = G_frame.Get("I3Geometry").omgeo
+
     if not name.endswith(".pickle") or name.endswith(".pckl") or name.endswith(".pkl"):
         name+=".pickle"
     
@@ -159,15 +196,15 @@ if __name__ == '__main__':
         config_path = os.path.join(full_path, "config","files", args.pathlist_config)
         print(config_path)
         pathlist = yaml.load(open(config_path,'r'), Loader = yaml.SafeLoader)
-        list_of_featuredicts = extract_from_pathlist(pathlist)
+        list_of_featuredicts = extract_from_pathlist(pathlist, omgeo)
         
     if args.pathlist is not None:
         pathlist = args.pathlist
-        list_of_featuredicts = extract_from_pathlist(pathlist)
+        list_of_featuredicts = extract_from_pathlist(pathlist, omgeo)
 
     if args.filenamelist is not None:
         filenamelist = args.filenamelist
-        list_of_featuredicts = extract_from_filenamelist(filenamelist)
+        list_of_featuredicts = extract_from_filenamelist(filenamelist, omgeo)
 
     pandasframe = pd.DataFrame(data = list_of_featuredicts)
     pandasframe.to_pickle(name)

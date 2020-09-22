@@ -1,4 +1,4 @@
-#!/bin/sh /cvmfs/icecube.opensciencegrid.org/py3-v4.1.0/icetray-start
+#!/bin/sh /cvmfs/icecube.opensciencegrid.org/py3-v4.1.1/icetray-start
 #METAPROJECT /home/pfuerst/i3_software_py3/combo/build
 
 """
@@ -38,7 +38,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--pandas_dataframe", type=str,
-        default = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/2012_frames/full2012.pickle",
+        default = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/2012_frames/full/full2012_wXY_wGEO.pickle",
         help="dataframe created by extractor.py")
     parser.add_argument(
         "--feature_config", type = str,
@@ -85,8 +85,8 @@ def parse_arguments():
         help = "for huber loss slope")
     
     parser.add_argument(
-        "--use_weights", action="store_true",
-        help="Uses OneWeights x 1e-18 as event weights. Make sure they are stored in the pandas_dataframe.")
+        "--no_weights", action="store_true",
+        help="NO OneWeights x 1e-18 as event weights. If not set, make sure they are stored in the pandas_dataframe.")
     args = parser.parse_args()
     return args
 
@@ -165,13 +165,13 @@ if __name__ == '__main__':
     testing_datamatrix    = xgb.DMatrix(data = X_test,  label = y_test )
 
     #handle weighting flag
-    if args.use_weights == True:
+    if args.no_weights == False:
         training_datamatrix.set_weight(w_train)
         validation_datamatrix.set_weight(w_eval)
         testing_datamatrix.set_weight(w_test)
         print("BDT training using generated OneWeights as weights.")
         
-    elif args.use_weights == False:
+    elif args.no_weights == True:
         print("BDT training on unweighted simulation data.")
     
     #build BDT parameter space
@@ -248,7 +248,7 @@ if __name__ == '__main__':
     X_save["E_predicted"]  = ypred
     savepath = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/withBDT/"
     X_save.to_pickle(savepath+"modeldata_"+modelname+'.pkl')
-    print("prediction saved at "+savepath+"modeldata_"+modelname+'.pkl')
+    print("prediction saved at "+savepath+"modeldata_"+modelname+'.pickle')
 
     #plots to document training/evauluation loss and feature map
     plt.rcParams["figure.figsize"] = (13, 6)

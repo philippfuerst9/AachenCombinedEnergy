@@ -1,4 +1,4 @@
-#!/bin/sh /cvmfs/icecube.opensciencegrid.org/py3-v4.1.0/icetray-start
+#!/bin/sh /cvmfs/icecube.opensciencegrid.org/py3-v4.1.1/icetray-start
 #METAPROJECT /home/pfuerst/i3_software_py3/combo/build
 
 """This program takes a trained model and a directory containing i3 files.
@@ -223,8 +223,8 @@ if __name__ == '__main__':
 
         if truth_bool:
             tray.AddModule(TrueMuonEnergy, "addingCombiEnergTruth")
-        if DNN_bool:
-            tray.AddModule(Exponator, "addingDNNExp")
+        #if DNN_bool:
+        #    tray.AddModule(Exponator, "addingDNNExp")
         if pred_bool:
             tray.AddModule(ACEPredictor, "addingCombiEnergy", model_path =  model_path)
 
@@ -240,8 +240,8 @@ if __name__ == '__main__':
 
         if truth_bool:
             tray.AddModule(TrueMuonEnergy, "addingCombiEnergTruth")
-        if DNN_bool:
-            tray.AddModule(Exponator, "addingDNNExp")
+        #if DNN_bool:
+        #    tray.AddModule(Exponator, "addingDNNExp")
         if pred_bool:
             tray.AddModule(ACEPredictor, "addingCombiEnergy", model_path =  model_path)
 

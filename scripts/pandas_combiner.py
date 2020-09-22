@@ -38,11 +38,12 @@ dataframes = []
 for path in pathlist:
     print(path)
     for pickled in os.listdir(path):
-        print(pickled)
-        with open(os.path.join(path,pickled), "rb") as file:
-            currentframe = pickle.load(file)
-            dataframes.append(currentframe)
-            del currentframe
+        if pickled.endswith(".pickle"):
+            print(pickled)
+            with open(os.path.join(path,pickled), "rb") as file:
+                currentframe = pickle.load(file)
+                dataframes.append(currentframe)
+                del currentframe
     
 full = pd.concat(dataframes)
 full.to_pickle(args.save)
