@@ -56,11 +56,7 @@ def parse_arguments():
     parser.add_argument("--no_truth",
                        action="store_false",
                        help="flag to not write truth keys")
-    #parser.add_argument("--do_expDNN",
-    #                   action="store_true",
-    #                   help="flag to write exponated DNN keys")
-    #/data/ana/Diffuse/AachenUpgoingTracks/sim/simprod_NuMu2019/21124/wPS_variables/wBDT
-    #/data/ana/Diffuse/AachenUpgoingTracks/sim/simprod_NuMu2019/21002/wPS_variables/wBDT
+
     args = parser.parse_args()
     return args
 
@@ -168,10 +164,6 @@ class ACEPredictor(icetray.I3ConditionalModule):
         features = bdt_features(frame)
         pandasframe = pd.DataFrame(data = features, index = [0])  #dataframe with one-line needs an index
         cleanframe = pandasframe[self.model_list]   #removes all non-feature keys from feature list
-
-        #if cleanframe["E_truncated"][0] == np.NaN or cleanframe["E_muex"][0] == np.NaN:
-        #    frame.Put("ACEnergy_Prediction", dataclasses.I3Double(np.NaN))
-        #else:
         datamatrix = xgb.DMatrix(data = cleanframe)
         prediction = self.model.predict(datamatrix)
         prediction= 10**(prediction[0].astype(np.float64))
@@ -205,13 +197,13 @@ if __name__ == '__main__':
         
     pred_bool  = args.no_prediction
     truth_bool = args.no_truth
-    #DNN_bool   = args.do_expDNN   
     
     #check there is actually something to be done.
     if not any([pred_bool,truth_bool]):
         print("All key-writing options were turned off. Exiting.")
         sys.exit()
-        
+    
+    #if one file is supplied it is unchanged
     if len(infiles)==1:
         infile = infiles[0]
         print("i3 file will be saved at {}".format(outfile))
@@ -220,8 +212,7 @@ if __name__ == '__main__':
 
         if truth_bool:
             tray.AddModule(TrueMuonEnergy, "addingCombiEnergTruth")
-        #if DNN_bool:
-        #    tray.AddModule(Exponator, "addingDNNExp")
+
         if pred_bool:
             tray.AddModule(ACEPredictor, "addingCombiEnergy", model_path =  model_path)
 
@@ -229,21 +220,19 @@ if __name__ == '__main__':
         tray.Execute()
         tray.Finish()
         
-    """
+
     #if several are supplied they will be batched
     elif len(infiles)>1:
-        print("i3 files will be batched to {}".format(outfile))
+        print("***BATCHING! several i3 inputs were given. files will be batched to {}".format(outfile))
         tray = I3Tray()
         tray.Add("I3Reader","source", filenamelist = infiles) 
 
         if truth_bool:
             tray.AddModule(TrueMuonEnergy, "addingCombiEnergTruth")
-        #if DNN_bool:
-        #    tray.AddModule(Exponator, "addingDNNExp")
+
         if pred_bool:
             tray.AddModule(ACEPredictor, "addingCombiEnergy", model_path =  model_path)
 
         tray.Add("I3Writer", Filename = outfile)
         tray.Execute()
         tray.Finish()
-    """
