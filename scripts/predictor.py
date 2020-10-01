@@ -42,11 +42,11 @@ def parse_arguments():
                         default = "PICKLE_pshedelta_winner_N5000_L5_E_no_sigmapar_0.1.model",
                         help="trained xgboost model used for prediction.")
 
-    parser.add_argument("--infiles", type = str,
+    parser.add_argument("--infiles", "-i", type = str,
                         nargs="+",
-                        help = "Input /path/to/file. If list, they will be batched.")
+                        help = "Input /path/to/file.")
     
-    parser.add_argument("--outfile",
+    parser.add_argument("--outfile", "-o",
                         required = "--infile" in sys.argv, type = str,
                         help = "/path/to/name_of_out_file. Directories will be created if necessary.")
     
@@ -56,9 +56,9 @@ def parse_arguments():
     parser.add_argument("--no_truth",
                        action="store_false",
                        help="flag to not write truth keys")
-    parser.add_argument("--no_expDNN",
-                       action="store_false",
-                       help="flag to not write exponated DNN keys")
+    #parser.add_argument("--do_expDNN",
+    #                   action="store_true",
+    #                   help="flag to write exponated DNN keys")
     #/data/ana/Diffuse/AachenUpgoingTracks/sim/simprod_NuMu2019/21124/wPS_variables/wBDT
     #/data/ana/Diffuse/AachenUpgoingTracks/sim/simprod_NuMu2019/21002/wPS_variables/wBDT
     args = parser.parse_args()
@@ -119,7 +119,6 @@ class Exponator(icetray.I3ConditionalModule):
         pass
 
 class TrueMuonEnergy(icetray.I3ConditionalModule):
-    
     """I3Module to add several true muon energies.
     
     AtInteraction: the Muon energy when it is first created
@@ -141,9 +140,7 @@ class TrueMuonEnergy(icetray.I3ConditionalModule):
         self.PushFrame(frame)
         
 class ACEPredictor(icetray.I3ConditionalModule):
-    
     """I3Module to add an energy prediction key
-    
     Uses a trained BDT and needs the specific features it was trained on
     """
     
@@ -208,10 +205,10 @@ if __name__ == '__main__':
         
     pred_bool  = args.no_prediction
     truth_bool = args.no_truth
-    DNN_bool   = args.no_expDNN   
+    #DNN_bool   = args.do_expDNN   
     
     #check there is actually something to be done.
-    if not any([pred_bool,truth_bool,DNN_bool]):
+    if not any([pred_bool,truth_bool]):
         print("All key-writing options were turned off. Exiting.")
         sys.exit()
         
@@ -231,7 +228,8 @@ if __name__ == '__main__':
         tray.Add("I3Writer", Filename = outfile)
         tray.Execute()
         tray.Finish()
-    
+        
+    """
     #if several are supplied they will be batched
     elif len(infiles)>1:
         print("i3 files will be batched to {}".format(outfile))
@@ -248,3 +246,4 @@ if __name__ == '__main__':
         tray.Add("I3Writer", Filename = outfile)
         tray.Execute()
         tray.Finish()
+    """

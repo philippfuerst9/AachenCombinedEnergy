@@ -1,0 +1,9 @@
+initialdir = /home/pfuerst
+executable = /home/pfuerst/master_thesis/software/combienergy/condor/predict/icetray_wrapper_predictor.sh
+arguments = $(PARAMS)
+request_memory = 5.5GB
+request_cpus = 1
+output = $(ERR_DIR)/$(NAME).out
+error  = $(ERR_DIR)/$(NAME).err
+log    = $(LOG_DIR)/$(NAME).log
+queue 1

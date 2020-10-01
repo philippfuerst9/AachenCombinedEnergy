@@ -1,5 +1,5 @@
 should_transfer_files = yes
-executable = /home/pfuerst/master_thesis/software/combienergy/condor/icetray_wrapper_training.sh
+executable = /home/pfuerst/master_thesis/software/combienergy/condor/train/icetray_wrapper_training.sh
 arguments  = --num_rounds 2500 --modelname my_modelname --gpu --objective rmse 
 initialdir = /home/pfuerst
 log        = /scratch/pfuerst/submit_logs/combi_trainer.log
