@@ -11,6 +11,7 @@ import os
 import pickle
 import sys
 import time
+import glob
 
 # -- external packages --
 #e.g. pip install pyyaml --user
@@ -41,41 +42,60 @@ def parse_arguments():
     
     group = parser.add_mutually_exclusive_group(required = True)
 
-    group.add_argument(
-        "--pathlist_config", type=str,
-        #default = 'i3_pathlist_v2.yaml',
-        help="config .yaml containing python list of paths to i3 files")
-    group.add_argument("--pathlist", type = str, nargs="+",
+    group.add_argument("--pathlist_config", 
+                       type=str,
+                        #e.g. 'i3_pathlist_v2.yaml',
+                        help="config .yaml containing python list of paths to i3 files")
+    group.add_argument("--pathlist",
+                       type = str, nargs="+",
                        help = "path do directory containing i3 files.")
-    group.add_argument("--filenamelist", type = str, nargs="+",
+    group.add_argument("--filenamelist", 
+                       type = str, nargs="+",
                        help= "list of filenames ending with .i3.zst.")
-
-    #/home/pfuerst/master_thesis/software/BDT_energy_reconstruction/config/files/
-    parser.add_argument(
-        "--write", type = str, required = True,
-        help= "path+name of the produced full .pickle file at /data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/")
     
-    parser.add_argument(
-        "--wACE", action = "store_true",
-        help="flag to extract predicted energies. Set this only if prediction keys already exist.")
+    #configs at
+    #/home/pfuerst/master_thesis/software/BDT_energy_reconstruction/config/files/
+    
+    parser.add_argument("--write", 
+                        type = str, required = True,
+                        help= "path+name for the produced full .pickle file.")
+    
+    #store at
+    #/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/
+    
+    parser.add_argument("--sim_set", 
+                       type = str,
+                       required = True, 
+                       help="either 2019 or 2012, to get respective GCD file.")
+    
+    parser.add_argument("--wACE", 
+                        action = "store_true",
+                        help="flag to extract predicted energies. Set this only if prediction keys already exist.")
 
+    parser.add_argument("--wTrueMuE",
+                        action = "store_true",
+                        help="set if key for true muon energy at entry already exists.")
     args = parser.parse_args()
     return args
 
-def feature_extractor(frame, wACE=False):
+def feature_extractor(frame, wACE=False, wTrueMuE=False):
     """reads feature keys from frame into a dictionary
     
     Energies are in log10[GeV], except for energy at entry/exit as exit can be 0
     returns all data necessary for correctly weighting events and training the BDT. 
     """
-    #if true e key does not exist do this
-    #e_entry = np.NaN
-    #e_exit  = np.NaN
-    #try:
-    #    e_entry, e_exit = sme.EnergyAtEgdeNoMuonGun(frame)
+    e_entry = np.NaN
+    e_exit  = np.NaN
+    
+    if wTrueMuE:
+        e_entry = frame["TrueMuoneEnergyAtDetectorEntry"].value
+        e_exit  = frame["TrueMuoneEnergyAtDetectorLeave"].value
+    else:
+        try:
+            e_entry, e_exit = sme.EnergyAtEgdeNoMuonGun(frame)
 
-    #except:
-    #    pass
+        except:
+            pass
     
     features = {
     "cog_rho"             : frame["L5_cog_rho"].value,
@@ -93,8 +113,8 @@ def feature_extractor(frame, wACE=False):
     "E_muex"              : np.NaN,
     "E_dnn"               : frame["TUM_dnn_energy_hive"]["mu_E_on_entry"],
     "random_variable"     : np.random.random()*10,
-    "E_entry"             : frame["TrueMuoneEnergyAtDetectorEntry"].value,   #e_entry
-    "E_exit"              : frame["TrueMuoneEnergyAtDetectorLeave"].value,   #e_exit
+    "E_entry"             : e_entry,   
+    "E_exit"              : e_exit,   
     "OneWeight"           : frame["I3MCWeightDict"]["OneWeight"],
     "NEvent"              : frame["I3MCWeightDict"]["NEvents"],
     "TIntProbW"           : frame["I3MCWeightDict"]["TotalWeight"],          #TotalInteractionProbabilityWeight for 2012
@@ -123,7 +143,7 @@ def feature_extractor(frame, wACE=False):
 def mean_event_position(p_frame, omgeo):
     """takes list of I3 OMKeys and I3 omgeo object and returns the positions of all hit DOMs."""
     
-    omkeys = p_frame["TWSRTHVInIcePulsesIC"].keys()
+    omkeys = dataclasses.I3RecoPulseSeriesMap.from_frame(p_frame, 'TWSRTHVInIcePulsesIC').keys()
     x_list = []
     y_list = []
     z_list = []
@@ -141,34 +161,35 @@ def mean_event_position(p_frame, omgeo):
     returndict = {"x":x_mean,"y":y_mean,"z":z_mean, "r":r_mean}
     return returndict
 
-def extract_from_pathlist(pathlist, omgeo):
+
+def extract_from_pathlist(pathlist, omgeo, wACE = False, wTrueMuE = False):
     list_of_featuredicts = []
     
     for path in pathlist:
         print("--- folder {} ---".format(path))
-        for filename in os.listdir(path):
-            if filename.endswith(".i3.zst"):
-                print("processing file {}".format(filename))
-                with dataio.I3File(os.path.join(path,filename)) as f:
-                    for currentframe in f:        
-                        if str(currentframe.Stop) == "Physics":
-                            featuredict = feature_extractor(currentframe, wACE = wACE_bool)
-                            mean_position = mean_event_position(currentframe, omgeo)
-                            featuredict["mean_x"] = mean_position["x"]
-                            featuredict["mean_y"] = mean_position["y"]
-                            featuredict["mean_z"] = mean_position["z"]
-                            featuredict["mean_r"] = mean_position["r"]                      
-                            list_of_featuredicts.append(featuredict)
+        filenames = sorted(glob.glob(os.path.join(path, "*i3.zst")))
+        for filename in filenames:
+            print("processing file {}".format(filename))
+            with dataio.I3File(os.path.join(path,filename)) as f:
+                for currentframe in f:        
+                    if str(currentframe.Stop) == "Physics":
+                        featuredict = feature_extractor(currentframe, wACE = wACE, wTrueMuE = wTrueMuE)
+                        mean_position = mean_event_position(currentframe, omgeo)
+                        featuredict["mean_x"] = mean_position["x"]
+                        featuredict["mean_y"] = mean_position["y"]
+                        featuredict["mean_z"] = mean_position["z"]
+                        featuredict["mean_r"] = mean_position["r"]                      
+                        list_of_featuredicts.append(featuredict)
     return list_of_featuredicts
 
-def extract_from_filenamelist(filenamelist, omgeo):
+def extract_from_filenamelist(filenamelist, omgeo, wACE = False, wTrueMuE = False):
     list_of_featuredicts = []
     for filename in filenamelist:
         print("processing file {}".format(filename))
         with dataio.I3File(filename) as f:
             for currentframe in f:        
                 if str(currentframe.Stop) == "Physics":
-                    featuredict = feature_extractor(currentframe, wACE = wACE_bool)
+                    featuredict = feature_extractor(currentframe, wACE = wACE, wTrueMuE = wTrueMuE)
                     mean_position = mean_event_position(currentframe, omgeo)
                     featuredict["mean_x"] = mean_position["x"]
                     featuredict["mean_y"] = mean_position["y"]
@@ -176,19 +197,34 @@ def extract_from_filenamelist(filenamelist, omgeo):
                     featuredict["mean_r"] = mean_position["r"]  
                     list_of_featuredicts.append(featuredict)
     return list_of_featuredicts
-                            
-if __name__ == '__main__':
+
+def get_omgeo(sim_set):
+    if sim_set == "2012":
+        GCD_path = "/cvmfs/icecube.opensciencegrid.org/data/GCD/GeoCalibDetectorStatus_2012.56063_V0.i3.gz"
+        GCD_file = dataio.I3File(GCD_path)
+        GCD_file.rewind()
+        G_frame = GCD_file.pop_frame()
+    elif sim_set == "2019":
+        GCD_path = "/cvmfs/icecube.opensciencegrid.org/data/GCD/GeoCalibDetectorStatus_AVG_55697-57531_PASS2_SPE_withScaledNoise.i3.gz"
+        GCD_file = dataio.I3File(GCD_path)
+        GCD_file.rewind()
+        I_frame = GCD_file.pop_frame()
+        G_frame = GCD_file.pop_frame()
     
+    else:
+        raise ValueError("only 2012 and 2019 sim sets have configured GCD paths. Implement your own?")
+        
+    omgeo = G_frame.Get("I3Geometry").omgeo
+    return omgeo
+
+if __name__ == '__main__':
+    print("Extractor started.")
     args = parse_arguments()    
     wACE_bool = args.wACE
+    wTrueMuE_bool = args.wTrueMuE
     name = args.write
-    
-    GCD_2012_path = "/cvmfs/icecube.opensciencegrid.org/data/GCD/GeoCalibDetectorStatus_2012.56063_V0.i3.gz"
-    GCD_file = dataio.I3File(GCD_2012_path)
-    GCD_file.rewind()
-    G_frame = GCD_file.pop_frame()
-    omgeo = G_frame.Get("I3Geometry").omgeo
-
+    omgeo = get_omgeo(args.sim_set)
+          
     if not name.endswith(".pickle") or name.endswith(".pckl") or name.endswith(".pkl"):
         name+=".pickle"
     
@@ -196,7 +232,7 @@ if __name__ == '__main__':
         config_path = os.path.join(full_path, "config","files", args.pathlist_config)
         print(config_path)
         pathlist = yaml.load(open(config_path,'r'), Loader = yaml.SafeLoader)
-        list_of_featuredicts = extract_from_pathlist(pathlist, omgeo)
+        list_of_featuredicts = extract_from_pathlist(pathlist, omgeo, wACE = wACE_bool, wTrueMuE = wTrueMuE_bool)
         
     if args.pathlist is not None:
         pathlist = args.pathlist
@@ -204,7 +240,7 @@ if __name__ == '__main__':
 
     if args.filenamelist is not None:
         filenamelist = args.filenamelist
-        list_of_featuredicts = extract_from_filenamelist(filenamelist, omgeo)
+        list_of_featuredicts = extract_from_filenamelist(filenamelist, omgeo, wACE = wACE_bool, wTrueMuE = wTrueMuE_bool)
 
     pandasframe = pd.DataFrame(data = list_of_featuredicts)
     pandasframe.to_pickle(name)
