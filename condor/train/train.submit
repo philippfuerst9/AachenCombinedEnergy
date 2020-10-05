@@ -1,10 +1,11 @@
 should_transfer_files = yes
 executable = /home/pfuerst/master_thesis/software/combienergy/condor/train/icetray_wrapper_training.sh
-arguments  = --num_rounds 2500 --modelname my_modelname --gpu --objective rmse 
-initialdir = /home/pfuerst
-log        = /scratch/pfuerst/submit_logs/combi_trainer.log
-output     = /data/user/pfuerst/condor/condorlogs/combi_trainer.out
-error      = /data/user/pfuerst/condor/condorlogs/combi_trainer.err
+modelname = MODELNAME
+arguments  = --num_rounds 10000 --modelname $(MODELNAME) --gpu --objective rmse --sim_year 2019
+
+log        = /scratch/pfuerst/submit_logs/$(MODELNAME)_combi_trainer.log
+output     = /data/user/pfuerst/condor/condorlogs/$(MODELNAME)_combi_trainer.out
+error      = /data/user/pfuerst/condor/condorlogs/$(MODELNAME)_combi_trainer.err
 
 request_gpus = 1
 RequestMemory = 4500

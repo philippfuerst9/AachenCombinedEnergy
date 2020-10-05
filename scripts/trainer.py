@@ -24,7 +24,7 @@ import yaml
 import xgboost as xgb
 
 # -- icecube software --
-from icecube.weighting.weighting import from_simprod
+from icecube.weighting.weighting import from_simprod, NeutrinoGenerator
 
 # -- custom imports --
 full_path = "/home/pfuerst/master_thesis/software/combienergy"
@@ -38,8 +38,12 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--pandas_dataframe", type=str,
-        default = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/2012_frames/full/full2012_wXY_wGEO.pickle",
+        #default = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/2012_frames/full/full2012_wXY_wGEO.pickle",
+        default = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/2019_frames/21217+21220/combined_training_set.pickle",
         help="dataframe created by extractor.py")
+    parser.add_argument("--sim_year", required = True,
+                       type = str,
+                       help="either 2012 or 2019. implement new weighting function for your own dataset!")
     parser.add_argument(
         "--feature_config", type = str,
         default = "L5_E_no_sigmapar.yaml",
@@ -48,7 +52,7 @@ def parse_arguments():
         "--label_key", type = str, default = "E_entry",
         help="key in dataframe to be used as label (has true E), previously E_truth_label which was in log10E!")
     parser.add_argument(
-        "--modelname", type = str, default = 'combienergy',
+        "--modelname", type = str, default = 'my_combienergy_model',
         help = "custom name tag to be appended to the output model name.")
     parser.add_argument(
         "--gpu", action = 'store_true',
@@ -61,7 +65,7 @@ def parse_arguments():
     parser.add_argument(
         "--learning_rate", type=float, default=0.03)
     parser.add_argument(
-        "--early_stopping_rounds", type=int, default=200)
+        "--early_stopping_rounds", type=int, default=1000)
     parser.add_argument(
         "--subsample", type=float, default=0.8)
     parser.add_argument(
@@ -75,25 +79,25 @@ def parse_arguments():
         help="number of boosting rounds")
     parser.add_argument(
         "--test_split_size", type = float, default = 0.1,
-        help="percent of data used for testing, i.e. amount of data with predicted energies")
+        help="percent of data used for quick model testing.")
     parser.add_argument(
         "--objective", type = str, default = "rmse", #'pshedelta'
-        help="objective function to use, rmse, pshe, pshedelta, rrmse, weightrmse are possible rn.")
+        help="objective function to use, rmse, pshe, pshedelta, rrmse, weightrmse are implemented.")
 
     parser.add_argument(
         "--delta", type = float, default = 3,
-        help = "for huber loss slope")
+        help = "for huber loss slope if objective pshedelta is set.")
     
     parser.add_argument(
         "--no_weights", action="store_true",
-        help="NO OneWeights x 1e-18 as event weights. If not set, make sure they are stored in the pandas_dataframe.")
+        help="Turn off OneWeights x 1e-18 as event weights. If not set, make sure they are stored in the pandas_dataframe.")
     args = parser.parse_args()
     return args
 
-def one_weight_builder(prime_E, prime_Type, prime_coszen, total_weight, 
+def one_weight_builder_2012(prime_E, prime_Type, prime_coszen, total_weight, 
                        ds_nums = [11029, 11069, 11070],
                        ds_nfiles = [3190, 3920, 997]):      
-    """builds OneWeights when combining different sim sets.
+    """builds OneWeights for training on the combined sim sets 11029, 11069 and 11070.
     the generator is basically the #events per energy range
     prime_E: ["MCPrimary1"].energy
     prime_Type: ["MCPrimary1"].type
@@ -104,6 +108,22 @@ def one_weight_builder(prime_E, prime_Type, prime_coszen, total_weight,
     """
     
     generator_sum = np.sum([from_simprod(ds_num) * ds_nfiles[i] for i, ds_num in enumerate(ds_nums)])
+    return total_weight / (generator_sum(prime_E, particle_type = prime_Type, cos_theta = prime_coszen)*prime_E)
+
+def one_weight_builder_2019(prime_E, prime_Type, prime_coszen, total_weight): 
+    """builds OneWeights for training on the combined sim sets 21217, 21220.
+    the generator is basically the #events per energy range
+    prime_E: ["MCPrimary1"].energy
+    prime_Type: ["MCPrimary1"].type
+    prime_coszen: cos(["MCPrimary1"].dir.zenith)
+    total_weight: ["I3MCWeightDict"]["TotalInteractionProbabilityWeight"]
+    returns the OneWeight/E for this specific event, i.e. weighted with an 
+    E**-1 flux for constant weight in log bins
+    """
+    generator_21217 = np.sum([NeutrinoGenerator(10000, 100, 1e8, 1.5, "NuMu")]) * 21674
+    generator_21220 = np.sum([NeutrinoGenerator(250, 100, 1e8, 1., "NuMu")]) * 5179
+    
+    generator_sum = generator_21217+generator_21220
     return total_weight / (generator_sum(prime_E, particle_type = prime_Type, cos_theta = prime_coszen)*prime_E)
 
 def cleaner(pandasframe):
@@ -124,9 +144,18 @@ if __name__ == '__main__':
     y = cut_dict[args.label_key]
     y = np.log10(y) # E_entry is in true energy
 
-    #build weights    
-    weights = one_weight_builder(cut_dict["MCPrimaryEnergy"], cut_dict["MCPrimaryType"], 
-                                 cut_dict["MCPrimaryCosZen"], cut_dict["TIntProbW"])
+    #build weights
+    if args.sim_year == "2012":
+        print("2012 weighting: assuming training on 11029, 11069, 11070 sets.")
+        weights = one_weight_builder_2012(cut_dict["MCPrimaryEnergy"], cut_dict["MCPrimaryType"], 
+                                     cut_dict["MCPrimaryCosZen"], cut_dict["TIntProbW"])
+    elif args.sim_year == "2019":
+        print("2019 weighting: assuming training on 21217, 21220 sets.")
+        weights = one_weight_builder_2019(cut_dict["MCPrimaryEnergy"], cut_dict["MCPrimaryType"], 
+                                     cut_dict["MCPrimaryCosZen"], cut_dict["TIntProbW"])    
+    else:
+        raise ValueError("Invalid weighting option! Must be 2012 or 2019.")
+
     cut_dict.insert(5,"generator_weights", weights)
     
     #split test set which will be saved (with prediction) as dataframe
@@ -247,7 +276,7 @@ if __name__ == '__main__':
     ypred = model.predict(testing_datamatrix)
     X_save["E_predicted"]  = ypred
     savepath = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/withBDT/"
-    X_save.to_pickle(savepath+"modeldata_"+modelname+'.pkl')
+    X_save.to_pickle(savepath+"modeldata_"+modelname+'.pickle')
     print("prediction saved at "+savepath+"modeldata_"+modelname+'.pickle')
 
     #plots to document training/evauluation loss and feature map
@@ -264,7 +293,7 @@ if __name__ == '__main__':
         plt.plot(validation_rmse, label = "validation")
         plt.xlabel("# Boosting Runds")
         plt.ylabel(str(key))
-        plt.ylim(0,0.4)
+        #plt.ylim(0,0.4)
         plt.legend()
         plt.grid()
         plt.savefig("/home/pfuerst/master_thesis/plots/BDT_validation/"+modelname+str(key)+"_losscurve.png")
