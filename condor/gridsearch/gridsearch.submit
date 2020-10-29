@@ -1,0 +1,9 @@
+should_transfer_files = yes
+executable = /home/pfuerst/master_thesis/software/combienergy/condor/gridsearch/icetray_wrapper_gridsearch.sh
+name = gridsearch
+log        = /scratch/pfuerst/submit_logs/$(name).log
+output     = /data/user/pfuerst/condor/condorlogs/$(name).out
+error      = /data/user/pfuerst/condor/condorlogs/$(name).err
+request_cpus = 4
+RequestMemory = 4500
+queue 1
