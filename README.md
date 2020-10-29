@@ -14,7 +14,7 @@ On Cobalt you can load your icetray environment and then load a virtual environm
 # 1) Run extractor.py
 
 To  run `extractor.py` you need to create a list of all paths to your i3 files used for training the energy reco BDT. This is done with `/config/builders/make_i3_pathlist.py` which creates a .yaml file containing a list of paths. Alternatively, just supply one path to a directory containing i3-files or supply a single file.
-`extractor.py` then creates a big pandas dataframe containing the keys necessary for training the BDT. New keys can be added to this frame via `add_feature.py` or by changing the function `feature_extractor.py`.
+`extractor.py` then creates a big pandas dataframe containing the keys necessary for training the BDT. New keys can be added to this frame via `add_feature.py` or by changing the function `feature_extractor.py`. One can also extract from batches of i3-files to pickles and then run `pandas_combiner.py` to combine these dataframes. This is the fastest method to extract data from large amounts of i3-files. 
 
 # 2) Run trainer.py
 
