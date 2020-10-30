@@ -48,7 +48,7 @@ def parse_arguments():
                         help="config .yaml containing python list of paths to i3 files")
     group.add_argument("--pathlist",
                        type = str, nargs="+",
-                       help = "path do directory containing i3 files.")
+                       help = "path to directory containing i3 files.")
     group.add_argument("--filenamelist", 
                        type = str, nargs="+",
                        help= "list of filenames ending with .i3.zst.")
@@ -127,6 +127,7 @@ def feature_extractor(frame, wACE=False, wTrueMuE=False):
     
     if wACE == True:
         features["E_predicted"] = frame["ACEnergy_Prediction"].value
+        features["E_entry"] =     frame["ACEnergy_Truth"].value
                                  
     try:
         features["E_truncated"]   = np.log10(frame["SplineMPEICTruncatedEnergySPICEMie_AllDOMS_Muon"].energy)

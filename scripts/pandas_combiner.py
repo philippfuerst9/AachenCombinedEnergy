@@ -37,7 +37,7 @@ if not os.path.exists(os.path.dirname(save)):
 dataframes = []
 for path in pathlist:
     print(path)
-    for pickled in os.listdir(path):
+    for pickled in sorted(os.listdir(path)):
         if pickled.endswith(".pickle"):
             print(pickled)
             with open(os.path.join(path,pickled), "rb") as file:

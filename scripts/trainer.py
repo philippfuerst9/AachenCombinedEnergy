@@ -4,6 +4,7 @@
 """
 Trains an xgboost booster model with a custom configuration
 on feature data from extractor.py. 
+Default Hyperparameters are optimized for training on 2012 data.
 Saves the model and Loss curve + Feature map plots in hardcoded directories.
 """
 
@@ -38,8 +39,8 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--pandas_dataframe", type=str,
-        #default = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/2012_frames/full/full2012_wXY_wGEO.pickle",
-        default = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/2019_frames/21217+21220/combined_training_set.pickle",
+        default = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/2012_frames/full/full2012_wXY_wGEO.pickle",
+        #default = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/2019_frames/21217+21220/combined_training_set.pickle",
         help="dataframe created by extractor.py")
     parser.add_argument("--sim_year", required = True,
                        type = str,
@@ -120,8 +121,8 @@ def one_weight_builder_2019(prime_E, prime_Type, prime_coszen, total_weight):
     returns the OneWeight/E for this specific event, i.e. weighted with an 
     E**-1 flux for constant weight in log bins
     """
-    generator_21217 = np.sum([NeutrinoGenerator(10000, 100, 1e8, 1.5, "NuMu")]) * 21674
-    generator_21220 = np.sum([NeutrinoGenerator(250, 100, 1e8, 1., "NuMu")]) * 5179
+    generator_21217 = np.sum([NeutrinoGenerator(10000, 100, 1e8, 1.5, "NuMu")]) * 21674 #*21914 #files in actual folder
+    generator_21220 = np.sum([NeutrinoGenerator(250, 100, 1e8, 1., "NuMu")]) * 5179 #*9999
     
     generator_sum = generator_21217+generator_21220
     return total_weight / (generator_sum(prime_E, particle_type = prime_Type, cos_theta = prime_coszen)*prime_E)
@@ -258,7 +259,7 @@ if __name__ == '__main__':
     #save model
     mobj = str(args.objective)
     mobj = mobj.replace(":", "_")
-    modelname = "PICKLE_"+mobj+'_'+args.modelname+'_N'+str(args.num_rounds)+"_"+str(args.feature_config[:-5])+'_'+str(args.test_split_size)+'.model'
+    modelname = mobj+'_'+args.modelname+'_N'+str(args.num_rounds)+"_"+str(args.feature_config[:-5])+'_'+str(args.test_split_size)+'.model'
     print("model saved as "+modelname)
     
     #######################################################################################################

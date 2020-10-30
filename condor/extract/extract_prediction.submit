@@ -1,10 +1,10 @@
 executable = /home/pfuerst/master_thesis/software/combienergy/scripts/extractor.py
-arguments = --filenamelist $(FILENAMELIST) --write $(WRITE) --wACE
+arguments = --filenamelist $(FILENAMELIST) --write $(WRITE) --wACE --sim_set 2019
 initialdir = /home/pfuerst
-log = /scratch/pfuerst/submit_logs/$(BATCHNAME).log
-output = /data/user/pfuerst/condor/condorlogs/$(BATCHNAME).out
-error  = /data/user/pfuerst/condor/condorlogs/$(BATCHNAME).err
+log = /scratch/pfuerst/combienergy/extractors/$(SET)/$(BATCHNAME).log 
+output = /data/user/pfuerst/condor/logs/extractors/$(SET)/$(BATCHNAME).out 
+error  = /data/user/pfuerst/condor/logs/extractors/$(SET)/$(BATCHNAME).err 
 
-RequestMemory = 2000
+RequestMemory = 5200
 
 queue 1

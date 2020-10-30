@@ -187,6 +187,7 @@ if __name__ == '__main__':
     infiles = args.infiles
     
     if not os.path.exists(os.path.split(args.outfile)[0]):
+        print("write directory did not exist yet, creating it at {}".format(args.outfile))
         os.makedirs(os.path.split(args.outfile)[0])
     
     outfile = args.outfile
