@@ -65,6 +65,7 @@ class LLHScan_1D(object):
                 gamma_llhs.append(current_llh)
                 fitted_phis.append(current_fit_phi)
                 fitted_pars_fix_gamma.append(current_fitted_pars)
+                
             for p in self.scan_phi_files:
                 current_fit = pd.read_pickle(p)
                 current_phi = current_fit["fixed-parameters"]["astro_norm"]
@@ -77,30 +78,46 @@ class LLHScan_1D(object):
                 fitted_gammas.append(current_fit_gamma)
                 fitted_pars_fix_phi.append(current_fitted_pars)
 
-
+            # sort gamma scans for nice plotting
             gamma_llhs = np.array(gamma_llhs)
             gamma_llhs = gamma_llhs[np.argsort(np.array(gammas_scan_points))]
+            
             fitted_phis = np.array(fitted_phis)
             fitted_phis = fitted_phis[np.argsort(np.array(gammas_scan_points))]
+            
+            fitted_pars_fix_gamma = np.array(fitted_pars_fix_gamma)
+            fitted_pars_fix_gamma = fitted_pars_fix_gamma[np.argsort(np.array(gammas_scan_points))]
+            
             gammas_scan_points = np.sort(np.array(gammas_scan_points))
 
+            # sort phi scans for plotting
             phi_llhs = np.array(phi_llhs)
             phi_llhs = phi_llhs[np.argsort(np.array(phis_scan_points))]
+            
             fitted_gammas = np.array(fitted_gammas)
             fitted_gammas = fitted_gammas[np.argsort(np.array(phis_scan_points))]
+            
+            fitted_pars_fix_phi = np.array(fitted_pars_fix_phi)
+            fitted_pars_fix_phi = fitted_pars_fix_phi[np.argsort(np.array(phis_scan_points))]
+            
             phis_scan_points = np.sort(np.array(phis_scan_points))
 
             gamma_dict = {"scan_points": np.array(gammas_scan_points),
                          "2DLLH": np.array(gamma_llhs),
                          "fitted_phis": np.array(fitted_phis),
-                         "fitted_pars": fitted_pars_fix_gamma}
+                         "fitted_pars": fitted_pars_fix_gamma
+                         }
                             
             phi_dict = {"scan_points": np.array(phis_scan_points),
                        "2DLLH":np.array(phi_llhs),
-                       "fitted_gammas": np.array(fitted_gammas)}
+                       "fitted_gammas": np.array(fitted_gammas),
+                       "fitted_pars": fitted_pars_fix_phi
+                       }
+            
             return_dict = {"gamma" : gamma_dict,
-                           "phi" : phi_dict,
-                          "fitted_pars": fitted_pars_fix_phi}
+                           "phi" : phi_dict
+                          }
+
             return return_dict
         else:
             print("No fit files detected in {}".format(self.path))
@@ -217,10 +234,10 @@ def dl_from_ld(ld):
         if not all(key in dic for dic in ld):
             raise ValueError("dict entries in list have different keys! Keys in first dict: {}".format(keys))
         
-    dl = {k: [dic[k] for dic in LD] for k in ld[0]}
+    dl = {k: [dic[k] for dic in ld] for k in ld[0]}
     return dl
 
-def ld_from_dl(dl)
+def ld_from_dl(dl):
     """ 
     builds a list of dicts from dict of lists. 
     All lists need to have the same len.
