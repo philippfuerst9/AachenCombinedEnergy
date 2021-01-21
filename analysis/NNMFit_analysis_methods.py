@@ -14,8 +14,6 @@ from scipy import stats
 from scipy.interpolate import griddata as scipygrid
 from scipy.interpolate import UnivariateSpline
 
-# useful functions and classes
-
 class LLHScan_1D(object):
     """class to load LLH values for a scan with just one free systematic parameter.
     """

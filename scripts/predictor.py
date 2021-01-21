@@ -1,14 +1,13 @@
 #!/bin/sh /cvmfs/icecube.opensciencegrid.org/py3-v4.1.1/icetray-start
 #METAPROJECT /home/pfuerst/i3_software_py3/combo/build
 
-"""This program takes a trained model and a directory containing i3 files.
-It adds a model prediction and a true energy key to these files and saves them in another directory.
-By default also adds an exponated version of TUM DNN energy in GeV.
+"""This program takes a trained model and one or several i3 files.
+It adds a model prediction and a true energy key to the file(s) and saves a new file in another directory.
 """
 
 # -- internal packages -- 
 import argparse
-import numpy   as np
+import numpy as np
 import os
 import pickle
 import sys
@@ -56,7 +55,7 @@ def parse_arguments():
     parser.add_argument("--no_truth",
                        action="store_false",
                        help="flag to not write truth keys")
-
+    
     args = parser.parse_args()
     return args
 
@@ -78,9 +77,15 @@ def bdt_features(frame, wACE=False):
     "sdir_e"              : frame["L5_sdir_e"].value,
     "E_truncated"         : np.NaN,
     "E_muex"              : np.NaN,
-    "E_dnn"               : frame["TUM_dnn_energy_hive"]["mu_E_on_entry"],
+    #"E_dnn"               : frame["TUM_dnn_energy_hive"]["mu_E_on_entry"],
     "random_variable"     : np.random.random()*10,
     } 
+    
+    try:
+        features["E_dnn"] = frame["TUM_dnn_energy_hive"]["mu_E_on_entry"]
+    except: 
+        features["E_dnn"] = frame["TUM_dnn_energy"]["mu_E_on_entry"]      
+    
     try:
         features["E_truncated"]   = np.log10(frame["SplineMPEICTruncatedEnergySPICEMie_AllDOMS_Muon"].energy)
     except:

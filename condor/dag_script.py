@@ -1,3 +1,6 @@
+"""credit to Rene Reimann
+"""
+
 class DagScript(object):
     template  = 'JOB {name} {submitScript}\n'
     #template += 'VARS {name} NAME="{name}"\n'
