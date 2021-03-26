@@ -39,10 +39,10 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--pandas_dataframe", type=str,
-        default = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/2012_frames/full/full2012_wXY_wGEO.pickle",
+        default = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/2012_frames/full/full2012.pickle",
         #default = "/data/user/pfuerst/Reco_Analysis/Simulated_Energies_Lists/feature_dataframes/2019_frames/21217+21220/combined_training_set.pickle",
         help="dataframe created by extractor.py")
-    parser.add_argument("--sim_year", required = True,
+    parser.add_argument("--sim_year", default="2012",
                        type = str,
                        help="either 2012 or 2019. implement new weighting function for your own dataset!")
     parser.add_argument(
@@ -51,7 +51,7 @@ def parse_arguments():
         help= ".yaml containing a list of features to be used for training and prediction")
     parser.add_argument(
         "--label_key", type = str, default = "E_entry",
-        help="key in dataframe to be used as label (has true E), previously E_truth_label which was in log10E!")
+        help="key in dataframe to be used as truth label")
     parser.add_argument(
         "--modelname", type = str, default = 'my_combienergy_model',
         help = "custom name tag to be appended to the output model name.")
@@ -76,17 +76,17 @@ def parse_arguments():
     parser.add_argument(
         "--min_child_weight", type = float, default = 100)
     parser.add_argument(
-        "--num_rounds", type=int, default = 2500,
+        "--num_rounds", type=int, default = 10,
         help="number of boosting rounds")
     parser.add_argument(
         "--test_split_size", type = float, default = 0.1,
         help="percent of data used for quick model testing.")
     parser.add_argument(
-        "--objective", type = str, default = "rmse", #'pshedelta'
+        "--objective", type = str, default = "pshedelta", #'pshedelta'
         help="objective function to use, rmse, pshe, pshedelta, rrmse, weightrmse are implemented.")
 
     parser.add_argument(
-        "--delta", type = float, default = 3,
+        "--delta", type = float, default = 1.0,
         help = "for huber loss slope if objective pshedelta is set.")
     
     parser.add_argument(
@@ -288,7 +288,11 @@ if __name__ == '__main__':
     for key in evals_result["eval"].keys():
         training_rmse = evals_result["train"][key]
         validation_rmse = evals_result["eval"][key]
-
+        training_save = os.path.join(savepath, "training_loss_{}_{}.pickle".format(key,modelname))
+        validation_save = os.path.join(savepath, "validation_loss_{}_{}.pickle".format(key,modelname))
+        pickle.dump(training_rmse, open(training_save,"wb"))
+        pickle.dump(validation_rmse, open(validation_save,"wb"))  
+        
         plt.figure()
         plt.plot(training_rmse, label = "training")
         plt.plot(validation_rmse, label = "validation")

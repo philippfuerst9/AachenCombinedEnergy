@@ -148,8 +148,6 @@ class ACEPredictor(icetray.I3ConditionalModule):
     def __init__(self,context):
         icetray.I3ConditionalModule.__init__(self, context)
         self.AddParameter("model_path", "xgbooster model to be used, only pickled model and L5_E config is valid!")
-        #rmse_combienergy_N2500_L5_E.model
-        
         
     def Configure(self):
         """Loads a trained Booster model. 

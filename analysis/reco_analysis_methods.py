@@ -17,6 +17,47 @@ import scipy.stats
 import imp
 sme  = imp.load_source('stettner_module', '/home/pfuerst/master_thesis/software/reco_analysis/Segmented_Muon_Energy_jstettner.py')
 
+from matplotlib import cm
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap
+viridis = cm.get_cmap('viridis', 256)
+
+
+# some color definitions
+N = 256
+vals = np.ones((N, 4))
+vals[:, 0] = np.linspace(210/256, 1, N)
+vals[:, 1] = np.linspace(105/256, 1, N)
+vals[:, 2] = np.linspace(30/256, 1, N)
+newcmp_r = ListedColormap(vals)
+
+
+N = 256
+vals = np.ones((N, 4))
+vals[:, 0] = np.linspace(210/256, 1, N)[::-1]
+vals[:, 1] = np.linspace(105/256, 1, N)[::-1]
+vals[:, 2] = np.linspace(30/256, 1, N)[::-1]
+newcmp = ListedColormap(vals)
+
+reco_colormaps = {
+    "trunc": "Blues",
+    "muex": newcmp,
+    "dnn": "Greens",
+    "ace": "Purples"
+}
+reco_colormaps_r = {
+    "trunc": "Blues_r",
+    "muex": newcmp_r,
+    "dnn": "Greens_r",
+    "ace": "Purples_r"
+}
+reco_colors = {
+    "trunc": "#125EA6",
+    "muex": "Chocolate",
+    "dnn": "Green",
+    "ace": "Purple"
+}
+
+
 def create_log_bin_edges(Real_Min, Real_Max, nbins):
     return np.logspace(np.log10(Real_Min), np.log10(Real_Max), nbins+2)
 
