@@ -6,7 +6,7 @@ To achieve this, an xgboost BDT is trained to predict the muon energy at detecto
 
 # Run it on an IceCube Cobalt server
 
-Git clone this repository to a place where you want it. The /analysis folder contains plotting scripts for my master's thesis (Philipp Fürst) and is not part of the module. The major scripts are in /scripts. Each of them contains hardcoded paths which need to be set up to your environmet,
+Git clone this repository to a place where you want it. The `/analysis` folder contains plotting scripts for my master's thesis (Philipp Fürst) and is not part of the module. The major scripts are in `/scripts`. Each of them contains hardcoded paths which need to be set up to your environmet,
 this includes path to directories for plots etc. 
 
 On Cobalt you can load your icetray environment and then load a virtual environment where everything is installed with `source /home/pfuerst/venvs/venv_py3-v4.1.1/bin/activate` or you can install all the necessary packages yourself (python 3.7, a compatible icetray build and an xgboost 1.1.1 installation is necessary, along with some additional packages (pandas, yaml, etc.). 
@@ -29,7 +29,7 @@ To predict energies on new i3 files with your trained model, run `predictor.py`.
 
 # ACE
 
-To add the ACE energy estimator to your files, simply run predictor.py with the default trained model. Check that your i3-files already contain the necessary features.
+To add the ACE energy estimator to your files, simply run `predictor.py` with the default trained model. Check that your i3-files already contain the necessary features.
 
 # Condor
 
