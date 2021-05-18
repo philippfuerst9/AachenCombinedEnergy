@@ -1,5 +1,5 @@
 #!/bin/sh /cvmfs/icecube.opensciencegrid.org/py3-v4.1.0/icetray-start
-#METAPROJECT /home/pfuerst/i3_software_py3/combo/build
+#METAPROJECT /data/user/pfuerst/software/icecube/i3_software_py3/combo/build
 
 import pickle
 import pandas as pd

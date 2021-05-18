@@ -1,5 +1,5 @@
 #!/bin/sh /cvmfs/icecube.opensciencegrid.org/py2-v3.1.1/icetray-start
-#METAPROJECT /home/pfuerst/i3_software/combo/build
+#METAPROJECT /data/user/pfuerst/software/icecube/i3_software_py3/combo/build
 
 """
 Performs a grid search over hyperparameters to find the best values.

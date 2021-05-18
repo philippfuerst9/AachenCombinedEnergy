@@ -1,5 +1,5 @@
 #!/bin/sh /cvmfs/icecube.opensciencegrid.org/py3-v4.1.1/icetray-start
-#METAPROJECT /home/pfuerst/i3_software_py3/combo/build
+#METAPROJECT /data/user/pfuerst/software/icecube/i3_software_py3/combo/build
 
 """This program takes a trained model and one or several i3 files.
 It adds a model prediction and a true energy key to the file(s) and saves a new file in another directory.

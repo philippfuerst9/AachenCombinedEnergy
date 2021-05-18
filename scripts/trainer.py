@@ -1,5 +1,5 @@
 #!/bin/sh /cvmfs/icecube.opensciencegrid.org/py3-v4.1.1/icetray-start
-#METAPROJECT /home/pfuerst/i3_software_py3/combo/build
+#METAPROJECT /data/user/pfuerst/software/icecube/i3_software_py3/combo/build
 
 """
 Trains an xgboost booster model with a custom configuration
@@ -134,6 +134,7 @@ def cleaner(pandasframe):
     
     cleanframe = pandasframe.replace(to_replace = {"E_entry": 0.0}, value = pd.np.nan).dropna()
     return cleanframe
+
 
 if __name__ == '__main__':
     

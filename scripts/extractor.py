@@ -1,5 +1,5 @@
 #!/bin/sh /cvmfs/icecube.opensciencegrid.org/py3-v4.1.1/icetray-start
-#METAPROJECT /home/pfuerst/i3_software_py3/combo/build
+#METAPROJECT /data/user/pfuerst/software/icecube/i3_software_py3/combo/build
 
 """
 Builds keys defined in feature_extractor from i3 files into pandas dataframe(s)
